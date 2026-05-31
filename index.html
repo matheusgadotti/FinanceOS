@@ -6,11 +6,7 @@
 <title>FinanceOS</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{
---bg:#0f1117;--bg2:#1a1d26;--bg3:#22263a;--card:#1e2235;--border:#2e3354;
---accent:#6c63ff;--accent2:#4ecdc4;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;
---text:#ffffff;--muted:#a0aec0;--radius:12px;
-}
+:root{--bg:#0f1117;--bg2:#1a1d26;--bg3:#22263a;--card:#1e2235;--border:#2e3354;--accent:#6c63ff;--accent2:#4ecdc4;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;--text:#ffffff;--muted:#a0aec0;--radius:12px;}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh}
 .auth-screen{display:none;min-height:100vh;align-items:stretch}
 .auth-screen.visible{display:flex}
@@ -35,8 +31,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;mi
 .auth-tab.active{background:var(--accent);color:#fff}
 .fg{margin-bottom:1rem}
 .fg label{font-size:.76rem;color:var(--muted);display:block;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
-.fg input,.fg select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.6rem .85rem;font-size:.9rem;outline:none;transition:.2s}
-.fg input:focus,.fg select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,.12)}
+.fg input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.6rem .85rem;font-size:.9rem;outline:none;transition:.2s}
+.fg input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,.12)}
 .fg input::placeholder{color:rgba(160,174,192,.4)}
 .fg input.invalid{border-color:var(--red)!important}
 .fg .field-err{color:var(--red);font-size:.75rem;margin-top:.3rem;display:none}
@@ -53,12 +49,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;mi
 .btn-auth:disabled{opacity:.5;cursor:not-allowed}
 .pw-strength{height:4px;border-radius:2px;margin-top:.4rem;transition:.3s;background:var(--border)}
 .pw-strength-text{font-size:.72rem;color:var(--muted);margin-top:.25rem}
-@media(max-width:768px){
-  .auth-left{display:none}
-  .auth-right{width:100%;border-left:none;background:var(--bg);min-height:100vh;padding:2rem 1.5rem;align-items:flex-start;padding-top:3rem}
-  .auth-mobile-logo{display:block}
-  .auth-form-wrap{max-width:100%}
-}
+@media(max-width:768px){.auth-left{display:none}.auth-right{width:100%;border-left:none;background:var(--bg);min-height:100vh;padding:2rem 1.5rem;align-items:flex-start;padding-top:3rem}.auth-mobile-logo{display:block}.auth-form-wrap{max-width:100%}}
 .app{display:none;flex-direction:column;min-height:100vh}
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:.7rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
 .topbar-logo{font-size:1.1rem;font-weight:800;letter-spacing:-.5px;color:#fff}
@@ -86,29 +77,22 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;mi
 .metric{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}
 .metric label{font-size:.73rem;color:var(--muted);display:block;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em}
 .metric .val{font-size:1.35rem;font-weight:700;color:#fff}
-.metric .val.pos{color:var(--green)}
-.metric .val.neg{color:var(--red)}
-.metric .val.neutral{color:var(--accent2)}
+.metric .val.pos{color:var(--green)}.metric .val.neg{color:var(--red)}.metric .val.neutral{color:var(--accent2)}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
 .section-title{font-size:.92rem;font-weight:600;color:#fff}
 .btn{border:none;border-radius:8px;padding:.5rem 1rem;font-size:.82rem;font-weight:500;cursor:pointer;transition:.15s}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:#5a52e0}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
-.btn-ghost:hover{border-color:var(--accent);color:#fff}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#5a52e0}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn-ghost:hover{border-color:var(--accent);color:#fff}
 .btn-sm{padding:.28rem .65rem;font-size:.76rem}
-.btn-danger{background:transparent;border:1px solid transparent;color:var(--red)}
-.btn-danger:hover{border-color:var(--red)}
+.btn-danger{background:transparent;border:1px solid transparent;color:var(--red)}.btn-danger:hover{border-color:var(--red)}
 .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 table{width:100%;border-collapse:collapse;font-size:.82rem}
 th{background:var(--bg3);color:var(--muted);font-weight:500;padding:.6rem .9rem;text-align:left;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em}
 td{padding:.65rem .9rem;border-top:1px solid var(--border);color:#fff}
 tr:hover td{background:rgba(108,99,255,.06)}
 .badge{display:inline-block;padding:.18rem .5rem;border-radius:5px;font-size:.7rem;font-weight:600}
-.badge-rec{background:rgba(34,197,94,.15);color:#4ade80}
-.badge-exp{background:rgba(239,68,68,.15);color:#f87171}
-.badge-cat{background:rgba(108,99,255,.15);color:#a78bfa}
-.badge-inst{background:rgba(245,158,11,.15);color:#fbbf24;font-size:.65rem}
+.badge-rec{background:rgba(34,197,94,.15);color:#4ade80}.badge-exp{background:rgba(239,68,68,.15);color:#f87171}
+.badge-cat{background:rgba(108,99,255,.15);color:#a78bfa}.badge-inst{background:rgba(245,158,11,.15);color:#fbbf24;font-size:.65rem}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:center;justify-content:center;padding:1rem}
 .modal-bg.open{display:flex}
 .modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:1.75rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
@@ -162,8 +146,7 @@ tr:hover td{background:rgba(108,99,255,.06)}
 .progress-pct{font-size:.74rem;color:var(--muted);width:72px;text-align:right}
 .trend-item{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border)}
 .trend-item:last-child{border-bottom:none}
-.trend-month{font-size:.82rem;color:var(--muted)}
-.trend-val{font-size:.82rem;font-weight:600;color:#fff}
+.trend-month{font-size:.82rem;color:var(--muted)}.trend-val{font-size:.82rem;font-weight:600;color:#fff}
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--accent);color:#fff;padding:.65rem 1.2rem;border-radius:10px;font-size:.85rem;z-index:200;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none}
 .toast.show{opacity:1;transform:translateY(0)}
 .filter-row{display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap}
@@ -171,8 +154,7 @@ tr:hover td{background:rgba(108,99,255,.06)}
 .filter-row select option{background:var(--bg2);color:#fff}
 .empty-state{text-align:center;padding:2.5rem;color:var(--muted);font-size:.87rem}
 .obj-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:.85rem}
-.obj-name{font-weight:700;color:#fff}
-.obj-pct{font-size:.82rem;color:var(--accent2);font-weight:600}
+.obj-name{font-weight:700;color:#fff}.obj-pct{font-size:.82rem;color:var(--accent2);font-weight:600}
 .obj-bar-track{background:var(--bg3);border-radius:8px;height:10px;margin:.75rem 0 .5rem}
 .obj-bar-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:.8s}
 .obj-meta{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted);flex-wrap:wrap;gap:.25rem}
@@ -187,7 +169,6 @@ tr:hover td{background:rgba(108,99,255,.06)}
 </head>
 <body>
 
-<!-- AUTH -->
 <div id="authScreen" class="auth-screen visible">
   <div class="auth-left">
     <span class="auth-logo">Finance<span>OS</span></span>
@@ -206,66 +187,28 @@ tr:hover td{background:rgba(108,99,255,.06)}
         <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Entrar</button>
         <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Criar conta</button>
       </div>
-      <!-- LOGIN -->
       <div id="formLogin">
         <div class="auth-title">Bem-vindo de volta</div>
         <p class="auth-subtitle">Entre com sua conta para continuar</p>
         <div class="auth-alert" id="loginAlert"></div>
-        <div class="fg">
-          <label>E-mail</label>
-          <input type="email" id="loginEmail" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
-          <div class="field-err" id="loginEmailErr">Informe um e-mail válido</div>
-        </div>
-        <div class="fg">
-          <label>Senha</label>
-          <div class="pw-wrap">
-            <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-            <button class="pw-toggle" onclick="togglePw('loginPassword',this)" tabindex="-1">👁</button>
-          </div>
-          <div class="field-err" id="loginPasswordErr">Informe sua senha</div>
-        </div>
+        <div class="fg"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()"><div class="field-err" id="loginEmailErr">Informe um e-mail válido</div></div>
+        <div class="fg"><label>Senha</label><div class="pw-wrap"><input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"><button class="pw-toggle" onclick="togglePw('loginPassword',this)" tabindex="-1">👁</button></div><div class="field-err" id="loginPasswordErr">Informe sua senha</div></div>
         <button class="btn-auth" id="btnLogin" onclick="doLogin()">Entrar →</button>
       </div>
-      <!-- REGISTER -->
       <div id="formRegister" style="display:none">
         <div class="auth-title">Criar conta</div>
         <p class="auth-subtitle">Preencha os dados para se cadastrar</p>
         <div class="auth-alert" id="registerAlert"></div>
-        <div class="fg">
-          <label>Nome completo</label>
-          <input type="text" id="regName" placeholder="Seu nome">
-          <div class="field-err" id="regNameErr">Informe seu nome</div>
-        </div>
-        <div class="fg">
-          <label>E-mail</label>
-          <input type="email" id="regEmail" placeholder="seu@email.com">
-          <div class="field-err" id="regEmailErr">Informe um e-mail válido</div>
-        </div>
-        <div class="fg">
-          <label>Senha</label>
-          <div class="pw-wrap">
-            <input type="password" id="regPassword" placeholder="Mínimo 6 caracteres" oninput="checkPwStrength(this.value)">
-            <button class="pw-toggle" onclick="togglePw('regPassword',this)" tabindex="-1">👁</button>
-          </div>
-          <div class="pw-strength" id="pwStrengthBar"></div>
-          <div class="pw-strength-text" id="pwStrengthText"></div>
-          <div class="field-err" id="regPasswordErr">A senha deve ter no mínimo 6 caracteres</div>
-        </div>
-        <div class="fg">
-          <label>Confirmar senha</label>
-          <div class="pw-wrap">
-            <input type="password" id="regPassword2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')doRegister()">
-            <button class="pw-toggle" onclick="togglePw('regPassword2',this)" tabindex="-1">👁</button>
-          </div>
-          <div class="field-err" id="regPassword2Err">As senhas não conferem</div>
-        </div>
+        <div class="fg"><label>Nome completo</label><input type="text" id="regName" placeholder="Seu nome"><div class="field-err" id="regNameErr">Informe seu nome</div></div>
+        <div class="fg"><label>E-mail</label><input type="email" id="regEmail" placeholder="seu@email.com"><div class="field-err" id="regEmailErr">Informe um e-mail válido</div></div>
+        <div class="fg"><label>Senha</label><div class="pw-wrap"><input type="password" id="regPassword" placeholder="Mínimo 6 caracteres" oninput="checkPwStrength(this.value)"><button class="pw-toggle" onclick="togglePw('regPassword',this)" tabindex="-1">👁</button></div><div class="pw-strength" id="pwStrengthBar"></div><div class="pw-strength-text" id="pwStrengthText"></div><div class="field-err" id="regPasswordErr">A senha deve ter no mínimo 6 caracteres</div></div>
+        <div class="fg"><label>Confirmar senha</label><div class="pw-wrap"><input type="password" id="regPassword2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')doRegister()"><button class="pw-toggle" onclick="togglePw('regPassword2',this)" tabindex="-1">👁</button></div><div class="field-err" id="regPassword2Err">As senhas não conferem</div></div>
         <button class="btn-auth" id="btnRegister" onclick="doRegister()">Criar conta</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- APP -->
 <div id="app" class="app">
   <div class="topbar">
     <div class="topbar-logo">Finance<span>OS</span></div>
@@ -291,19 +234,14 @@ tr:hover td{background:rgba(108,99,255,.06)}
     <button class="nav-btn" onclick="showTab('settings',this)">⚙️ Configurações</button>
   </nav>
   <div class="content">
-
     <div id="tab-dashboard" class="tab active">
       <div class="cards-row" id="dashCards"></div>
       <div class="two-col">
         <div class="chart-bar-wrap"><div class="chart-title">Gastos por categoria</div><div id="expBars"><div class="empty-state">Sem dados</div></div></div>
         <div class="chart-bar-wrap"><div class="chart-title">Receitas por categoria</div><div id="recBars"><div class="empty-state">Sem dados</div></div></div>
       </div>
-      <div style="margin-top:1.25rem">
-        <div class="section-header"><span class="section-title">Últimas transações</span></div>
-        <div class="table-wrap"><div id="dashTxTable"></div></div>
-      </div>
+      <div style="margin-top:1.25rem"><div class="section-header"><span class="section-title">Últimas transações</span></div><div class="table-wrap"><div id="dashTxTable"></div></div></div>
     </div>
-
     <div id="tab-transactions" class="tab">
       <div class="section-header"><span class="section-title">Transações</span><button class="btn btn-primary" onclick="openTxModal()">+ Adicionar</button></div>
       <div class="filter-row">
@@ -313,46 +251,29 @@ tr:hover td{background:rgba(108,99,255,.06)}
       </div>
       <div class="table-wrap"><div id="txTable"></div></div>
     </div>
-
     <div id="tab-investments" class="tab">
       <div class="section-header"><span class="section-title">Carteira de Investimentos</span><button class="btn btn-primary" onclick="openInvModal()">+ Investimento</button></div>
       <div class="cards-row" id="invSummary"></div>
       <div id="invList"></div>
     </div>
-
     <div id="tab-goals" class="tab">
       <div class="section-header"><span class="section-title">Objetivos Financeiros</span><button class="btn btn-primary" onclick="openModal('addGoal')">+ Objetivo</button></div>
       <div id="goalsList"></div>
     </div>
-
     <div id="tab-reports" class="tab">
       <div class="section-header"><span class="section-title">Relatórios Avançados</span></div>
-      <div class="two-col">
-        <div class="report-card" id="rptFluxo"></div>
-        <div class="report-card" id="rptEvo"></div>
-      </div>
-      <div class="two-col">
-        <div class="report-card" id="rptCatExp"></div>
-        <div class="report-card" id="rptInvRet"></div>
-      </div>
+      <div class="two-col"><div class="report-card" id="rptFluxo"></div><div class="report-card" id="rptEvo"></div></div>
+      <div class="two-col"><div class="report-card" id="rptCatExp"></div><div class="report-card" id="rptInvRet"></div></div>
       <div class="report-card" id="rptTrend"></div>
     </div>
-
     <div id="tab-settings" class="tab">
       <div class="section-header"><span class="section-title">Categorias, Subcategorias e Configurações</span></div>
       <div class="two-col">
-        <div>
-          <div class="section-header"><span style="font-size:.82rem;color:var(--muted)">Categorias de Gastos</span><button class="btn btn-ghost btn-sm" onclick="openModal('addCatExp')">+ Nova</button></div>
-          <div class="table-wrap"><div id="catExpList"></div></div>
-        </div>
-        <div>
-          <div class="section-header"><span style="font-size:.82rem;color:var(--muted)">Categorias de Receitas</span><button class="btn btn-ghost btn-sm" onclick="openModal('addCatRec')">+ Nova</button></div>
-          <div class="table-wrap"><div id="catRecList"></div></div>
-        </div>
+        <div><div class="section-header"><span style="font-size:.82rem;color:var(--muted)">Categorias de Gastos</span><button class="btn btn-ghost btn-sm" onclick="openModal('addCatExp')">+ Nova</button></div><div class="table-wrap"><div id="catExpList"></div></div></div>
+        <div><div class="section-header"><span style="font-size:.82rem;color:var(--muted)">Categorias de Receitas</span><button class="btn btn-ghost btn-sm" onclick="openModal('addCatRec')">+ Nova</button></div><div class="table-wrap"><div id="catRecList"></div></div></div>
       </div>
       <div class="subcat-section">
-        <div class="subcat-header">
-          <span style="font-size:.82rem;color:var(--muted)">Subcategorias</span>
+        <div class="subcat-header"><span style="font-size:.82rem;color:var(--muted)">Subcategorias</span>
           <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
             <select class="subcat-select" id="subcatFilter" onchange="renderSubcatList()"><option value="">Todas as categorias</option></select>
             <button class="btn btn-ghost btn-sm" onclick="openModal('addSubcat')">+ Nova subcategoria</button>
@@ -371,7 +292,6 @@ tr:hover td{background:rgba(108,99,255,.06)}
         </div>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -382,28 +302,17 @@ tr:hover td{background:rgba(108,99,255,.06)}
     <input type="hidden" id="txEditId">
     <div class="form-row">
       <div class="mfg"><label>Tipo</label><select id="txType" onchange="updateTxCatOptions()"><option value="receita">Receita</option><option value="gasto">Gasto</option></select></div>
-      <div class="mfg">
-        <label>Valor (R$) <span style="color:var(--red)">*</span></label>
-        <input type="number" id="txVal" placeholder="0,00" step="0.01" oninput="updateInstallPreview()">
-        <div class="field-err" id="txValErr">Informe o valor</div>
-      </div>
+      <div class="mfg"><label>Valor (R$) <span style="color:var(--red)">*</span></label><input type="number" id="txVal" placeholder="0,00" step="0.01" oninput="updateInstallPreview()"><div class="field-err" id="txValErr">Informe o valor</div></div>
     </div>
     <div class="form-row">
-      <div class="mfg">
-        <label>Categoria <span style="color:var(--red)">*</span></label>
-        <select id="txCat" onchange="updateSubcatOptions()"></select>
-        <div class="field-err" id="txCatErr">Selecione uma categoria</div>
-      </div>
+      <div class="mfg"><label>Categoria <span style="color:var(--red)">*</span></label><select id="txCat" onchange="updateSubcatOptions()"></select><div class="field-err" id="txCatErr">Selecione uma categoria</div></div>
       <div class="mfg"><label>Subcategoria <span class="info-tag">opcional</span></label><select id="txSubcat"><option value="">— nenhuma —</option></select></div>
     </div>
     <div class="mfg"><label>Descrição <span class="info-tag">opcional</span></label><input type="text" id="txDesc" placeholder="Ex: Compra no mercado..."></div>
     <div class="mfg"><label>Observação <span class="info-tag">opcional</span></label><input type="text" id="txObs" placeholder="Detalhes adicionais..."></div>
     <div class="installment-box">
       <div class="box-title">🔄 Parcelamento / Recorrência</div>
-      <div class="toggle-row">
-        <span class="toggle-label">Parcelar esta transação</span>
-        <label class="toggle"><input type="checkbox" id="txInstallCheck" onchange="toggleInstallment()"><span class="toggle-slider"></span></label>
-      </div>
+      <div class="toggle-row"><span class="toggle-label">Parcelar esta transação</span><label class="toggle"><input type="checkbox" id="txInstallCheck" onchange="toggleInstallment()"><span class="toggle-slider"></span></label></div>
       <div id="installmentFields" style="display:none">
         <div class="form-row">
           <div class="mfg"><label>Nº de parcelas <span style="color:var(--red)">*</span></label><input type="number" id="txInstallTotal" min="2" max="120" value="2" oninput="updateInstallPreview()"></div>
@@ -411,13 +320,7 @@ tr:hover td{background:rgba(108,99,255,.06)}
         </div>
         <div id="installPreview" style="font-size:.78rem;color:var(--accent2);margin-top:.25rem"></div>
       </div>
-      <div id="noInstallFields">
-        <div class="mfg" style="margin-bottom:0">
-          <label>Data <span style="color:var(--red)">*</span></label>
-          <input type="date" id="txDate">
-          <div class="field-err" id="txDateErr">Informe a data</div>
-        </div>
-      </div>
+      <div id="noInstallFields"><div class="mfg" style="margin-bottom:0"><label>Data <span style="color:var(--red)">*</span></label><input type="date" id="txDate"><div class="field-err" id="txDateErr">Informe a data</div></div></div>
     </div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addTx')">Cancelar</button><button class="btn btn-primary" onclick="saveTx()">Salvar</button></div>
   </div>
@@ -428,76 +331,35 @@ tr:hover td{background:rgba(108,99,255,.06)}
   <div class="modal">
     <h3 id="invModalTitle">Novo Investimento</h3>
     <input type="hidden" id="invEditId">
-    <div class="mfg">
-      <label>Nome <span style="color:var(--red)">*</span></label>
-      <input type="text" id="invName" placeholder="Ex: Tesouro Selic, Ações PETR4...">
-      <div class="field-err" id="invNameErr">Informe o nome</div>
-    </div>
+    <div class="mfg"><label>Nome <span style="color:var(--red)">*</span></label><input type="text" id="invName" placeholder="Ex: Tesouro Selic, Ações PETR4..."><div class="field-err" id="invNameErr">Informe o nome</div></div>
     <div class="form-row">
       <div class="mfg"><label>Tipo</label><select id="invType"><option>Renda Fixa</option><option>Renda Variável</option><option>Fundo Imobiliário</option><option>Ações</option><option>Cripto</option><option>Poupança</option><option>Outro</option></select></div>
       <div class="mfg"><label>Instituição <span class="info-tag">opcional</span></label><input type="text" id="invInst" placeholder="Ex: Nubank, XP..."></div>
     </div>
     <div class="form-row">
-      <div class="mfg">
-        <label>Valor investido (R$) <span style="color:var(--red)">*</span></label>
-        <input type="number" id="invVal" placeholder="0,00" step="0.01" oninput="calcInvPreview()">
-        <div class="field-err" id="invValErr">Informe o valor investido</div>
-      </div>
+      <div class="mfg"><label>Valor investido (R$) <span style="color:var(--red)">*</span></label><input type="number" id="invVal" placeholder="0,00" step="0.01" oninput="calcInvPreview()"><div class="field-err" id="invValErr">Informe o valor</div></div>
       <div class="mfg"><label>Data de início <span class="info-tag">opcional</span></label><input type="date" id="invDate" oninput="calcInvPreview()"></div>
     </div>
-
-    <!-- MODO RENDIMENTO -->
-    <div class="mfg">
-      <label>Modo de rendimento</label>
+    <div class="mfg"><label>Modo de rendimento</label>
       <div class="yield-mode-tabs">
         <button class="yield-mode-tab active" id="yieldTabManual" onclick="setYieldMode('manual')">Manual (R$)</button>
-        <button class="yield-mode-tab" id="yieldTabPct" onclick="setYieldMode('pct')">Por % ao mês</button>
-        <button class="yield-mode-tab" id="yieldTabPctAnual" onclick="setYieldMode('pctAnual')">Por % ao ano</button>
+        <button class="yield-mode-tab" id="yieldTabPct" onclick="setYieldMode('pct')">% ao mês</button>
+        <button class="yield-mode-tab" id="yieldTabPctAnual" onclick="setYieldMode('pctAnual')">% ao ano</button>
       </div>
     </div>
-
-    <div id="yieldManualFields">
-      <div class="mfg">
-        <label>Rendimento acumulado (R$) <span class="info-tag">opcional</span></label>
-        <input type="number" id="invYield" placeholder="0,00" step="0.01">
-      </div>
-    </div>
-
-    <div id="yieldPctFields" style="display:none">
-      <div class="mfg">
-        <label>Taxa mensal (%) <span style="color:var(--red)">*</span></label>
-        <input type="number" id="invRateMes" placeholder="Ex: 1.05" step="0.01" oninput="calcInvPreview()">
-      </div>
-      <div id="invCalcPreview" class="calc-preview" style="display:none"></div>
-    </div>
-
-    <div id="yieldPctAnualFields" style="display:none">
-      <div class="mfg">
-        <label>Taxa anual (%) <span style="color:var(--red)">*</span></label>
-        <input type="number" id="invRateAnual" placeholder="Ex: 12.5" step="0.01" oninput="calcInvPreview()">
-      </div>
-      <div id="invCalcPreviewAnual" class="calc-preview" style="display:none"></div>
-    </div>
-
+    <div id="yieldManualFields"><div class="mfg"><label>Rendimento acumulado (R$) <span class="info-tag">opcional</span></label><input type="number" id="invYield" placeholder="0,00" step="0.01"></div></div>
+    <div id="yieldPctFields" style="display:none"><div class="mfg"><label>Taxa mensal (%)</label><input type="number" id="invRateMes" placeholder="Ex: 1.05" step="0.01" oninput="calcInvPreview()"></div><div id="invCalcPreview" class="calc-preview" style="display:none"></div></div>
+    <div id="yieldPctAnualFields" style="display:none"><div class="mfg"><label>Taxa anual (%)</label><input type="number" id="invRateAnual" placeholder="Ex: 12.5" step="0.01" oninput="calcInvPreview()"></div><div id="invCalcPreviewAnual" class="calc-preview" style="display:none"></div></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addInv')">Cancelar</button><button class="btn btn-primary" onclick="saveInv()">Salvar</button></div>
   </div>
 </div>
 
 <!-- MODAL OBJETIVO -->
 <div class="modal-bg" id="modal-addGoal">
-  <div class="modal">
-    <h3>Novo Objetivo</h3>
-    <div class="mfg">
-      <label>Nome do objetivo <span style="color:var(--red)">*</span></label>
-      <input type="text" id="goalName" placeholder="Ex: Viagem, Reserva emergência...">
-      <div class="field-err" id="goalNameErr">Informe o nome do objetivo</div>
-    </div>
+  <div class="modal"><h3>Novo Objetivo</h3>
+    <div class="mfg"><label>Nome <span style="color:var(--red)">*</span></label><input type="text" id="goalName" placeholder="Ex: Viagem..."><div class="field-err" id="goalNameErr">Informe o nome</div></div>
     <div class="form-row">
-      <div class="mfg">
-        <label>Valor meta (R$) <span style="color:var(--red)">*</span></label>
-        <input type="number" id="goalTarget" placeholder="10000" step="0.01">
-        <div class="field-err" id="goalTargetErr">Informe o valor da meta</div>
-      </div>
+      <div class="mfg"><label>Valor meta (R$) <span style="color:var(--red)">*</span></label><input type="number" id="goalTarget" placeholder="10000" step="0.01"><div class="field-err" id="goalTargetErr">Informe o valor</div></div>
       <div class="mfg"><label>Valor atual (R$) <span class="info-tag">opcional</span></label><input type="number" id="goalCurrent" placeholder="0" step="0.01"></div>
     </div>
     <div class="mfg"><label>Data limite <span class="info-tag">opcional</span></label><input type="date" id="goalDeadline"></div>
@@ -521,504 +383,6 @@ tr:hover td{background:rgba(108,99,255,.06)}
 </div>
 
 <div class="toast" id="toast"></div>
-
-<script>
-const API='https://financeos-api-jaiw.onrender.com';
-let authToken=localStorage.getItem('financeOS_token')||'';
-let currentUser=null;
-let db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[]};
-let pendingDelId=null,pendingDelGroup=null;
-let currentYieldMode='manual';
-
-async function apiFetch(method,path,body){
-  setSyncing(true);
-  try{
-    const headers={'Content-Type':'application/json'};
-    if(authToken)headers['Authorization']='Bearer '+authToken;
-    const r=await fetch(API+path,{method,headers,body:body?JSON.stringify(body):undefined});
-    const text=await r.text();
-    const data=text?JSON.parse(text):{};
-    if(!r.ok){if(r.status===401){logout();return null;}throw new Error(data.error||'Erro desconhecido');}
-    setSyncing(false);return data;
-  }catch(e){setSyncing(false,true);throw e;}
-}
-function setSyncing(on,err=false){
-  const d=document.getElementById('syncDot'),l=document.getElementById('syncLabel');
-  if(err){d.className='sync-dot error';l.textContent='Erro';}
-  else if(on){d.className='sync-dot syncing';l.textContent='Sincronizando...';}
-  else{d.className='sync-dot';l.textContent='Sincronizado';}
-}
-function fmt(v){return'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function fmtD(d){if(!d)return'';const[y,m,day]=d.split('-');return`${day}/${m}/${y}`;}
-function toast(m,c='var(--accent)'){const t=document.getElementById('toast');t.textContent=m;t.style.background=c;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
-
-// ── AUTH ────────────────────────────────────────────
-function showAlert(id,msg,type='error'){
-  const el=document.getElementById(id);
-  el.textContent=msg;el.className='auth-alert '+type;
-}
-function hideAlert(id){
-  const el=document.getElementById(id);el.className='auth-alert';el.textContent='';
-}
-function showFieldErr(id){document.getElementById(id).classList.add('show');}
-function hideFieldErr(id){document.getElementById(id).classList.remove('show');}
-function markInvalid(inputId,errId){
-  document.getElementById(inputId).classList.add('invalid');
-  document.getElementById(errId).classList.add('show');
-}
-function clearInvalid(inputId,errId){
-  document.getElementById(inputId).classList.remove('invalid');
-  document.getElementById(errId).classList.remove('show');
-}
-function switchAuthTab(tab){
-  document.getElementById('formLogin').style.display=tab==='login'?'block':'none';
-  document.getElementById('formRegister').style.display=tab==='register'?'block':'none';
-  document.getElementById('tabLogin').className='auth-tab'+(tab==='login'?' active':'');
-  document.getElementById('tabRegister').className='auth-tab'+(tab==='register'?' active':'');
-  hideAlert('loginAlert');hideAlert('registerAlert');
-}
-function togglePw(id,btn){const inp=document.getElementById(id);inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'👁':'🙈';}
-function checkPwStrength(pw){
-  const bar=document.getElementById('pwStrengthBar'),txt=document.getElementById('pwStrengthText');
-  if(!pw){bar.style.width='0';txt.textContent='';return;}
-  let score=0;
-  if(pw.length>=6)score++;if(pw.length>=10)score++;
-  if(/[A-Z]/.test(pw))score++;if(/[0-9]/.test(pw))score++;if(/[^A-Za-z0-9]/.test(pw))score++;
-  const levels=[{c:'var(--red)',t:'Muito fraca'},{c:'var(--red)',t:'Fraca'},{c:'var(--amber)',t:'Razoável'},{c:'var(--amber)',t:'Boa'},{c:'var(--green)',t:'Forte'},{c:'var(--green)',t:'Muito forte'}];
-  const l=levels[Math.min(score,5)];
-  bar.style.cssText=`background:${l.c};width:${((score+1)/6*100)}%;height:4px;border-radius:2px`;
-  txt.style.color=l.c;txt.textContent=l.t;
-}
-
-async function doLogin(){
-  const email=document.getElementById('loginEmail').value.trim();
-  const password=document.getElementById('loginPassword').value;
-  hideAlert('loginAlert');
-  let valid=true;
-  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){markInvalid('loginEmail','loginEmailErr');valid=false;}else{clearInvalid('loginEmail','loginEmailErr');}
-  if(!password){markInvalid('loginPassword','loginPasswordErr');valid=false;}else{clearInvalid('loginPassword','loginPasswordErr');}
-  if(!valid)return;
-  const btn=document.getElementById('btnLogin');btn.disabled=true;btn.textContent='Entrando...';
-  try{
-    const data=await apiFetch('POST','/auth/login',{email,password});
-    if(!data){btn.disabled=false;btn.textContent='Entrar →';return;}
-    authToken=data.token;currentUser=data.user;
-    localStorage.setItem('financeOS_token',authToken);
-    localStorage.setItem('financeOS_user',JSON.stringify(currentUser));
-    await enterApp();
-  }catch(e){
-    showAlert('loginAlert',e.message==='Failed to fetch'?'Não foi possível conectar ao servidor. Tente novamente.':e.message);
-    btn.disabled=false;btn.textContent='Entrar →';
-  }
-}
-
-async function doRegister(){
-  const name=document.getElementById('regName').value.trim();
-  const email=document.getElementById('regEmail').value.trim();
-  const password=document.getElementById('regPassword').value;
-  const password2=document.getElementById('regPassword2').value;
-  hideAlert('registerAlert');
-  let valid=true;
-  if(!name){markInvalid('regName','regNameErr');valid=false;}else{clearInvalid('regName','regNameErr');}
-  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){markInvalid('regEmail','regEmailErr');valid=false;}else{clearInvalid('regEmail','regEmailErr');}
-  if(!password||password.length<6){markInvalid('regPassword','regPasswordErr');valid=false;}else{clearInvalid('regPassword','regPasswordErr');}
-  if(password!==password2){markInvalid('regPassword2','regPassword2Err');valid=false;}else{clearInvalid('regPassword2','regPassword2Err');}
-  if(!valid)return;
-  const btn=document.getElementById('btnRegister');btn.disabled=true;btn.textContent='Criando conta...';
-  try{
-    const data=await apiFetch('POST','/auth/register',{name,email,password});
-    if(!data){btn.disabled=false;btn.textContent='Criar conta';return;}
-    authToken=data.token;currentUser=data.user;
-    localStorage.setItem('financeOS_token',authToken);
-    localStorage.setItem('financeOS_user',JSON.stringify(currentUser));
-    await enterApp();
-  }catch(e){
-    showAlert('registerAlert',e.message);
-    btn.disabled=false;btn.textContent='Criar conta';
-  }
-}
-
-async function enterApp(){
-  await loadAll();
-  document.getElementById('authScreen').classList.remove('visible');
-  document.getElementById('app').style.display='flex';
-  document.getElementById('topbarUser').innerHTML=`Olá, <strong>${currentUser.name.split(' ')[0]}</strong>`;
-  document.getElementById('monthSel').value=new Date().getMonth().toString();
-  renderAll();
-}
-function logout(){
-  authToken='';currentUser=null;
-  localStorage.removeItem('financeOS_token');localStorage.removeItem('financeOS_user');
-  db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[]};
-  document.getElementById('app').style.display='none';
-  document.getElementById('authScreen').classList.add('visible');
-  document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';
-  document.getElementById('btnLogin').disabled=false;document.getElementById('btnLogin').textContent='Entrar →';
-  hideAlert('loginAlert');switchAuthTab('login');
-}
-async function tryAutoLogin(){
-  if(!authToken)return;
-  try{const savedUser=localStorage.getItem('financeOS_user');if(savedUser)currentUser=JSON.parse(savedUser);await enterApp();}
-  catch(e){logout();}
-}
-
-async function loadAll(){
-  const[txs,invs,goals,cats,subcats]=await Promise.all([
-    apiFetch('GET','/transactions'),apiFetch('GET','/investments'),
-    apiFetch('GET','/goals'),apiFetch('GET','/categories'),apiFetch('GET','/subcategories'),
-  ]);
-  db.transactions=(txs||[]).map(t=>({...t,desc:t.description}));
-  db.investments=invs||[];db.goals=goals||[];
-  db.catExp=(cats||[]).filter(c=>c.type==='exp');
-  db.catRec=(cats||[]).filter(c=>c.type==='rec');
-  db.subcategories=subcats||[];
-}
-
-function getMonthFilter(){const v=document.getElementById('monthSel').value;return v==='all'?null:parseInt(v);}
-function filterTx(tx){const m=getMonthFilter();if(m===null)return tx;return tx.filter(t=>{if(!t.date)return false;return new Date(t.date+'T12:00:00').getMonth()===m;});}
-function showTab(id,btn){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');renderAll();
-}
-function renderAll(){renderDashboard();renderTxTable();renderInvestments();renderGoals();renderReports();renderSettings();}
-
-function renderDashboard(){
-  const txs=filterTx(db.transactions);
-  const rec=txs.filter(t=>t.type==='receita').reduce((s,t)=>s+parseFloat(t.value),0);
-  const exp=txs.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0);
-  const bal=rec-exp;
-  const invTotal=db.investments.reduce((s,i)=>s+parseFloat(i.value||0),0);
-  const invYield=db.investments.reduce((s,i)=>s+calcInvYield(i),0);
-  document.getElementById('dashCards').innerHTML=`
-    <div class="metric"><label>Receitas</label><div class="val pos">${fmt(rec)}</div></div>
-    <div class="metric"><label>Gastos</label><div class="val neg">${fmt(exp)}</div></div>
-    <div class="metric"><label>Saldo</label><div class="val ${bal>=0?'pos':'neg'}">${fmt(bal)}</div></div>
-    <div class="metric"><label>Investido</label><div class="val neutral">${fmt(invTotal)}</div></div>
-    <div class="metric"><label>Rendimentos</label><div class="val pos">${fmt(invYield)}</div></div>`;
-  renderBarChart('expBars',txs.filter(t=>t.type==='gasto'),true);
-  renderBarChart('recBars',txs.filter(t=>t.type==='receita'),false);
-  document.getElementById('dashTxTable').innerHTML=buildTxRows(txs.slice(0,5),false);
-}
-function renderBarChart(id,txs,isExp){
-  const map={};txs.forEach(t=>{map[t.category]=(map[t.category]||0)+parseFloat(t.value);});
-  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]);
-  if(!sorted.length){document.getElementById(id).innerHTML='<div class="empty-state">Sem dados</div>';return;}
-  const max=sorted[0][1];
-  document.getElementById(id).innerHTML=sorted.map(([cat,val])=>`<div class="bar-item"><div class="bar-label">${cat}</div><div class="bar-track"><div class="bar-fill" style="width:${(val/max*100).toFixed(1)}%;background:${isExp?'var(--red)':'var(--green)'}"></div></div><div class="bar-val">${fmt(val)}</div></div>`).join('');
-}
-function buildTxRows(txs,actions=true){
-  if(!txs.length)return'<div class="empty-state">Nenhuma transação encontrada</div>';
-  return`<table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th>${actions?'<th></th>':''}</tr></thead><tbody>`+
-    txs.map(t=>{
-      const isInst=t.installment_total>1;
-      const label=t.desc||t.description||'';
-      const subcat=t.subcategory?`<span style="font-size:.68rem;color:#c4b5fd"> › ${t.subcategory}</span>`:'';
-      const instBadge=isInst?`<span class="badge badge-inst">${t.installment_current}/${t.installment_total}x</span> `:'';
-      return`<tr>
-        <td style="color:var(--muted);white-space:nowrap">${fmtD(t.date)}</td>
-        <td>${instBadge}${label}${subcat}${t.obs?`<br><span style="font-size:.7rem;color:var(--muted)">${t.obs}</span>`:''}</td>
-        <td><span class="badge badge-cat">${t.category}</span></td>
-        <td><span class="badge ${t.type==='receita'?'badge-rec':'badge-exp'}">${t.type}</span></td>
-        <td style="font-weight:600;color:${t.type==='receita'?'var(--green)':'var(--red)'};white-space:nowrap">${fmt(t.value)}</td>
-        ${actions?`<td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="editTx('${t.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="askDelTx('${t.id}','${t.installment_group||''}',${t.installment_total||1})">🗑</button></td>`:''}
-      </tr>`;
-    }).join('')+'</tbody></table>';
-}
-function renderTxTable(){
-  let txs=filterTx(db.transactions);
-  const ftype=document.getElementById('fType')?.value||'all';
-  const fcat=document.getElementById('fCat')?.value||'all';
-  const fsort=document.getElementById('fSort')?.value||'date_desc';
-  if(ftype!=='all')txs=txs.filter(t=>t.type===ftype);
-  if(fcat!=='all')txs=txs.filter(t=>t.category===fcat);
-  txs=[...txs].sort((a,b)=>fsort==='date_desc'?b.date.localeCompare(a.date):fsort==='date_asc'?a.date.localeCompare(b.date):fsort==='val_desc'?b.value-a.value:a.value-b.value);
-  const allCats=[...new Set(db.transactions.map(t=>t.category))].sort();
-  const fc=document.getElementById('fCat');
-  if(fc){const cur=fc.value;fc.innerHTML='<option value="all">Todas categorias</option>'+allCats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');}
-  document.getElementById('txTable').innerHTML=buildTxRows(txs,true);
-}
-function openModal(id){document.getElementById('modal-'+id).classList.add('open');}
-function closeModal(id){document.getElementById('modal-'+id).classList.remove('open');}
-function updateTxCatOptions(){
-  const type=document.getElementById('txType').value;
-  const cats=type==='receita'?db.catRec:db.catExp;
-  document.getElementById('txCat').innerHTML=cats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
-  updateSubcatOptions();
-}
-function updateSubcatOptions(){
-  const catName=document.getElementById('txCat').value;
-  const cat=[...db.catExp,...db.catRec].find(c=>c.name===catName);
-  const subs=cat?db.subcategories.filter(s=>s.category_id===cat.id):[];
-  document.getElementById('txSubcat').innerHTML='<option value="">— nenhuma —</option>'+subs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
-}
-function toggleInstallment(){
-  const on=document.getElementById('txInstallCheck').checked;
-  document.getElementById('installmentFields').style.display=on?'block':'none';
-  document.getElementById('noInstallFields').style.display=on?'none':'block';
-  if(on){const now=new Date();document.getElementById('txInstallStart').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;updateInstallPreview();}
-}
-function updateInstallPreview(){
-  const n=parseInt(document.getElementById('txInstallTotal').value)||0;
-  const val=parseFloat(document.getElementById('txVal').value)||0;
-  const start=document.getElementById('txInstallStart').value;
-  if(!n||!start||!document.getElementById('txInstallCheck').checked){document.getElementById('installPreview').textContent='';return;}
-  const[y,m]=start.split('-').map(Number);
-  const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const last=new Date(y,m-1+n-1,1);
-  document.getElementById('installPreview').textContent=`${n}x de ${fmt(val/n)} — de ${months[m-1]}/${y} até ${months[last.getMonth()]}/${last.getFullYear()}`;
-}
-function openTxModal(){
-  document.getElementById('txEditId').value='';
-  document.getElementById('txModalTitle').textContent='Nova Transação';
-  document.getElementById('txType').value='gasto';
-  ['txDesc','txVal','txObs'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('txDate').value=new Date().toISOString().split('T')[0];
-  document.getElementById('txInstallCheck').checked=false;document.getElementById('txInstallTotal').value=2;
-  document.getElementById('installmentFields').style.display='none';document.getElementById('noInstallFields').style.display='block';
-  document.getElementById('installPreview').textContent='';
-  ['txValErr','txCatErr','txDateErr'].forEach(id=>document.getElementById(id).classList.remove('show'));
-  ['txVal','txCat'].forEach(id=>document.getElementById(id).classList.remove('invalid'));
-  updateTxCatOptions();openModal('addTx');
-}
-function editTx(id){
-  const t=db.transactions.find(x=>x.id===id);if(!t)return;
-  document.getElementById('txEditId').value=id;document.getElementById('txModalTitle').textContent='Editar Transação';
-  document.getElementById('txType').value=t.type;updateTxCatOptions();
-  document.getElementById('txCat').value=t.category;updateSubcatOptions();
-  document.getElementById('txSubcat').value=t.subcategory||'';
-  document.getElementById('txDesc').value=t.desc||t.description||'';
-  document.getElementById('txVal').value=t.value;document.getElementById('txDate').value=t.date;
-  document.getElementById('txObs').value=t.obs||'';
-  document.getElementById('txInstallCheck').checked=false;
-  document.getElementById('installmentFields').style.display='none';document.getElementById('noInstallFields').style.display='block';
-  openModal('addTx');
-}
-async function saveTx(){
-  const value=parseFloat(document.getElementById('txVal').value);
-  const type=document.getElementById('txType').value;
-  const category=document.getElementById('txCat').value;
-  const subcategory=document.getElementById('txSubcat').value||null;
-  const description=document.getElementById('txDesc').value.trim()||null;
-  const obs=document.getElementById('txObs').value.trim()||null;
-  const isInstall=document.getElementById('txInstallCheck').checked;
-  let valid=true;
-  if(!value||value<=0){markInvalid('txVal','txValErr');valid=false;}else{clearInvalid('txVal','txValErr');}
-  if(!category){markInvalid('txCat','txCatErr');valid=false;}else{clearInvalid('txCat','txCatErr');}
-  if(!isInstall){
-    const date=document.getElementById('txDate').value;
-    if(!date){document.getElementById('txDateErr').classList.add('show');valid=false;}else{document.getElementById('txDateErr').classList.remove('show');}
-  }
-  if(!valid)return;
-  const eid=document.getElementById('txEditId').value;
-  if(eid){
-    const date=document.getElementById('txDate').value;
-    try{
-      const r=await apiFetch('PATCH',`/transactions/${eid}`,{description,value,date,type,category,subcategory,obs});
-      const i=db.transactions.findIndex(x=>x.id===eid);
-      if(i>-1)db.transactions[i]={...db.transactions[i],description,desc:description,value,date,type,category,subcategory,obs};
-      closeModal('addTx');renderAll();toast('Transação atualizada!');
-    }catch(e){toast(e.message,'var(--red)');}
-    return;
-  }
-  if(isInstall){
-    const total=parseInt(document.getElementById('txInstallTotal').value)||1;
-    const startVal=document.getElementById('txInstallStart').value;
-    if(!startVal||total<2){toast('Informe parcelas e mês inicial','var(--red)');return;}
-    const[sy,sm]=startVal.split('-').map(Number);
-    const parcel=parseFloat((value/total).toFixed(2));
-    const group=crypto.randomUUID();
-    const rows=[];
-    for(let i=0;i<total;i++){
-      const d=new Date(sy,sm-1+i,1);
-      rows.push({description,value:parcel,date:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`,type,category,subcategory,obs,installment_total:total,installment_current:i+1,installment_group:group});
-    }
-    try{
-      const r=await apiFetch('POST','/transactions',rows);
-      (r||[]).forEach(t=>db.transactions.unshift({...t,desc:t.description}));
-      db.transactions.sort((a,b)=>b.date.localeCompare(a.date));
-      closeModal('addTx');renderAll();toast(`${total} parcelas criadas!`);
-    }catch(e){toast(e.message,'var(--red)');}
-  }else{
-    const date=document.getElementById('txDate').value;
-    try{
-      const r=await apiFetch('POST','/transactions',{description,value,date,type,category,subcategory,obs,installment_total:1,installment_current:1});
-      if(r&&r[0])db.transactions.unshift({...r[0],desc:r[0].description});
-      closeModal('addTx');renderAll();toast('Transação salva!');
-    }catch(e){toast(e.message,'var(--red)');}
-  }
-}
-function askDelTx(id,group,total){
-  pendingDelId=id;pendingDelGroup=group;
-  const isInst=total>1&&group;
-  document.getElementById('delTxMsg').textContent=isInst?'Esta transação faz parte de um parcelamento. Excluir só esta parcela ou todas?':'Confirma a exclusão desta transação?';
-  document.getElementById('delTxOnly').style.display=isInst?'':'none';
-  document.getElementById('delTxAll').textContent=isInst?'Todas as parcelas':'Confirmar exclusão';
-  openModal('delTx');
-}
-async function confirmDelTx(all){
-  try{
-    if(all&&pendingDelGroup){
-      await apiFetch('DELETE',`/transactions/group/${pendingDelGroup}`);
-      db.transactions=db.transactions.filter(t=>t.installment_group!==pendingDelGroup);
-      toast('Parcelamento excluído','var(--amber)');
-    }else{
-      await apiFetch('DELETE',`/transactions/${pendingDelId}`);
-      db.transactions=db.transactions.filter(t=>t.id!==pendingDelId);
-      toast('Transação excluída','var(--amber)');
-    }
-    closeModal('delTx');renderAll();
-  }catch(e){toast(e.message,'var(--red)');}
-}
-
-// ── INVESTIMENTOS ────────────────────────────────────
-function setYieldMode(mode){
-  currentYieldMode=mode;
-  document.getElementById('yieldTabManual').className='yield-mode-tab'+(mode==='manual'?' active':'');
-  document.getElementById('yieldTabPct').className='yield-mode-tab'+(mode==='pct'?' active':'');
-  document.getElementById('yieldTabPctAnual').className='yield-mode-tab'+(mode==='pctAnual'?' active':'');
-  document.getElementById('yieldManualFields').style.display=mode==='manual'?'block':'none';
-  document.getElementById('yieldPctFields').style.display=mode==='pct'?'block':'none';
-  document.getElementById('yieldPctAnualFields').style.display=mode==='pctAnual'?'block':'none';
-  calcInvPreview();
-}
-
-function calcInvYield(inv){
-  if(!inv.yield_mode||inv.yield_mode==='manual')return parseFloat(inv.yield||0);
-  const val=parseFloat(inv.value||0);
-  const rate=parseFloat(inv.yield_rate||0);
-  if(!val||!rate||!inv.date)return parseFloat(inv.yield||0);
-  const start=new Date(inv.date+'T12:00:00');
-  const now=new Date();
-  const months=(now.getFullYear()-start.getFullYear())*12+(now.getMonth()-start.getMonth());
-  if(months<=0)return 0;
-  if(inv.yield_mode==='pct'){
-    return parseFloat((val*Math.pow(1+rate/100,months)-val).toFixed(2));
-  }else{
-    const monthlyRate=Math.pow(1+rate/100,1/12)-1;
-    return parseFloat((val*Math.pow(1+monthlyRate,months)-val).toFixed(2));
-  }
-}
-
-function calcInvPreview(){
-  const val=parseFloat(document.getElementById('invVal').value)||0;
-  const date=document.getElementById('invDate').value;
-  if(!val||!date){
-    document.getElementById('invCalcPreview').style.display='none';
-    document.getElementById('invCalcPreviewAnual').style.display='none';
-    return;
-  }
-  const start=new Date(date+'T12:00:00');
-  const now=new Date();
-  const months=Math.max(0,(now.getFullYear()-start.getFullYear())*12+(now.getMonth()-start.getMonth()));
-  if(currentYieldMode==='pct'){
-    const rate=parseFloat(document.getElementById('invRateMes').value)||0;
-    if(!rate){document.getElementById('invCalcPreview').style.display='none';return;}
-    const yld=val*Math.pow(1+rate/100,months)-val;
-    const total=val+yld;
-    const el=document.getElementById('invCalcPreview');
-    el.style.display='block';
-    el.innerHTML=`📊 ${months} meses — Rendimento calculado: <strong>${fmt(yld)}</strong> | Total: <strong>${fmt(total)}</strong>`;
-  }else if(currentYieldMode==='pctAnual'){
-    const rate=parseFloat(document.getElementById('invRateAnual').value)||0;
-    if(!rate){document.getElementById('invCalcPreviewAnual').style.display='none';return;}
-    const monthlyRate=Math.pow(1+rate/100,1/12)-1;
-    const yld=val*Math.pow(1+monthlyRate,months)-val;
-    const total=val+yld;
-    const el=document.getElementById('invCalcPreviewAnual');
-    el.style.display='block';
-    el.innerHTML=`📊 ${months} meses — Rendimento calculado: <strong>${fmt(yld)}</strong> | Total: <strong>${fmt(total)}</strong>`;
-  }
-}
-
-function openInvModal(){
-  document.getElementById('invEditId').value='';document.getElementById('invModalTitle').textContent='Novo Investimento';
-  ['invName','invVal','invDate','invYield','invInst','invRateMes','invRateAnual'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('invType').value='Renda Fixa';
-  document.getElementById('invNameErr').classList.remove('show');document.getElementById('invValErr').classList.remove('show');
-  document.getElementById('invName').classList.remove('invalid');document.getElementById('invVal').classList.remove('invalid');
-  document.getElementById('invCalcPreview').style.display='none';document.getElementById('invCalcPreviewAnual').style.display='none';
-  setYieldMode('manual');openModal('addInv');
-}
-function editInv(id){
-  const inv=db.investments.find(x=>x.id===id);if(!inv)return;
-  document.getElementById('invEditId').value=id;document.getElementById('invModalTitle').textContent='Editar Investimento';
-  document.getElementById('invName').value=inv.name;document.getElementById('invType').value=inv.type;
-  document.getElementById('invVal').value=inv.value;document.getElementById('invDate').value=inv.date||'';
-  document.getElementById('invInst').value=inv.institution||'';
-  const mode=inv.yield_mode||'manual';
-  setYieldMode(mode);
-  if(mode==='manual')document.getElementById('invYield').value=inv.yield||0;
-  else if(mode==='pct')document.getElementById('invRateMes').value=inv.yield_rate||'';
-  else if(mode==='pctAnual')document.getElementById('invRateAnual').value=inv.yield_rate||'';
-  calcInvPreview();openModal('addInv');
-}
-async function saveInv(){
-  const name=document.getElementById('invName').value.trim();
-  const type=document.getElementById('invType').value;
-  const value=parseFloat(document.getElementById('invVal').value)||0;
-  const date=document.getElementById('invDate').value||null;
-  const institution=document.getElementById('invInst').value.trim();
-  let valid=true;
-  if(!name){markInvalid('invName','invNameErr');valid=false;}else{clearInvalid('invName','invNameErr');}
-  if(!value){markInvalid('invVal','invValErr');valid=false;}else{clearInvalid('invVal','invValErr');}
-  if(!valid)return;
-  let yield_val=0,yield_mode=currentYieldMode,yield_rate=null;
-  if(yield_mode==='manual'){
-    yield_val=parseFloat(document.getElementById('invYield').value)||0;
-  }else if(yield_mode==='pct'){
-    yield_rate=parseFloat(document.getElementById('invRateMes').value)||0;
-    yield_val=0;
-  }else if(yield_mode==='pctAnual'){
-    yield_rate=parseFloat(document.getElementById('invRateAnual').value)||0;
-    yield_val=0;
-  }
-  const payload={name,type,value,date,yield:yield_val,yield_mode,yield_rate,institution};
-  const eid=document.getElementById('invEditId').value;
-  try{
-    if(eid){
-      await apiFetch('PATCH',`/investments/${eid}`,payload);
-      const i=db.investments.findIndex(x=>x.id===eid);if(i>-1)db.investments[i]={...db.investments[i],...payload};
-    }else{
-      const r=await apiFetch('POST','/investments',payload);if(r&&r[0])db.investments.unshift(r[0]);
-    }
-    closeModal('addInv');renderAll();toast('Investimento salvo!');
-  }catch(e){toast(e.message,'var(--red)');}
-}
-async function delInv(id){
-  if(!confirm('Remover este investimento?'))return;
-  try{await apiFetch('DELETE',`/investments/${id}`);db.investments=db.investments.filter(i=>i.id!==id);renderAll();toast('Removido','var(--amber)');}catch(e){toast(e.message,'var(--red)');}
-}
-function renderInvestments(){
-  const total=db.investments.reduce((s,i)=>s+parseFloat(i.value||0),0);
-  const yields=db.investments.reduce((s,i)=>s+calcInvYield(i),0);
-  const pct=total>0?((yields/total)*100).toFixed(2):0;
-  document.getElementById('invSummary').innerHTML=`
-    <div class="metric"><label>Total investido</label><div class="val neutral">${fmt(total)}</div></div>
-    <div class="metric"><label>Rendimentos totais</label><div class="val pos">${fmt(yields)}</div></div>
-    <div class="metric"><label>Patrimônio total</label><div class="val pos">${fmt(total+yields)}</div></div>
-    <div class="metric"><label>Rentabilidade</label><div class="val pos">${pct}%</div></div>`;
-  if(!db.investments.length){document.getElementById('invList').innerHTML='<div class="empty-state">Nenhum investimento cadastrado</div>';return;}
-  document.getElementById('invList').innerHTML=db.investments.map(inv=>{
-    const yld=calcInvYield(inv);
-    const p=parseFloat(inv.value)>0?((yld/parseFloat(inv.value))*100).toFixed(2):0;
-    const modeLabel=inv.yield_mode==='pct'?`${inv.yield_rate}% a.m.`:inv.yield_mode==='pctAnual'?`${inv.yield_rate}% a.a.`:'Manual';
-    return`<div class="inv-card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div>
-          <div class="inv-name">${inv.name}</div>
-          <div style="display:flex;gap:.4rem;margin-top:.3rem;flex-wrap:wrap">
-            <span class="inv-tag">${inv.type}</span>
-            ${inv.institution?`<span class="inv-tag">${inv.institution}</span>`:''}
-            <span class="inv-tag" style="color:var(--accent2);border-color:rgba(78,205,196,.3)">📊 ${modeLabel}</span>
-          </div>
-        </div>
-        <div style="display:flex;gap:.35rem"><button class="btn btn-ghost btn-sm" onclick="editInv('${inv.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="delInv('${inv.id}')">🗑</button></div>
-      </div>
-      <div class="inv-stats">
-        <div class="inv-stat"><label>Investido</label><span>${fmt(inv.value)}</span></div>
-        <div class="inv-stat"><label>Rendimento</label><span style="color:${yld>=0?'var(--green)':'var(--red)'}">${fmt(yld)}</span></div>
-        <div class="inv-stat"><label>Total</label><span>${fmt(parseFloat(inv.value)+yld)}</span></div>
-        <div class="inv-stat"><label>Rentab.</label><span style="color:${yld>=0?'var(--green)':'var(--red)'}">${p}%</span></div>
-      </div>
-      ${inv.date?`<div style="font-size:.7rem;color:var(--muted);margin-top:.6rem"
+<script src="app.js"></script>
+</body>
+</html>

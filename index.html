@@ -12,8 +12,6 @@
 --text:#ffffff;--muted:#a0aec0;--radius:12px;
 }
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh}
-
-/* ── AUTH SCREEN ── */
 .auth-screen{display:none;min-height:100vh;align-items:stretch}
 .auth-screen.visible{display:flex}
 .auth-left{flex:1;background:linear-gradient(145deg,#12152a 0%,#1a1d2e 50%,#0f1117 100%);display:flex;flex-direction:column;justify-content:center;padding:4rem 5rem;position:relative;overflow:hidden}
@@ -35,23 +33,24 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;mi
 .auth-tabs{display:flex;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:1.75rem;border:1px solid var(--border)}
 .auth-tab{flex:1;text-align:center;padding:.5rem;border-radius:8px;font-size:.85rem;font-weight:500;cursor:pointer;color:var(--muted);transition:.2s;border:none;background:transparent}
 .auth-tab.active{background:var(--accent);color:#fff}
-.form-group{margin-bottom:1rem}
-.form-group label{font-size:.76rem;color:var(--muted);display:block;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
-.form-group input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.6rem .85rem;font-size:.9rem;outline:none;transition:.2s}
-.form-group input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,.12)}
-.form-group input::placeholder{color:rgba(160,174,192,.4)}
+.fg{margin-bottom:1rem}
+.fg label{font-size:.76rem;color:var(--muted);display:block;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+.fg input,.fg select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.6rem .85rem;font-size:.9rem;outline:none;transition:.2s}
+.fg input:focus,.fg select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,.12)}
+.fg input::placeholder{color:rgba(160,174,192,.4)}
+.fg input.invalid{border-color:var(--red)!important}
+.fg .field-err{color:var(--red);font-size:.75rem;margin-top:.3rem;display:none}
+.fg .field-err.show{display:block}
 .pw-wrap{position:relative}
 .pw-wrap input{padding-right:2.5rem}
-.pw-toggle{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem;padding:0;line-height:1}
+.pw-toggle{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem;padding:0}
 .pw-toggle:hover{color:#fff}
-.auth-error{color:var(--red);font-size:.8rem;margin-bottom:.75rem;min-height:1.1rem;display:block}
-.auth-success{color:var(--green);font-size:.8rem;margin-bottom:.75rem;display:block}
+.auth-alert{border-radius:8px;padding:.65rem .9rem;font-size:.82rem;margin-bottom:1rem;display:none}
+.auth-alert.error{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;display:block}
+.auth-alert.success{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;display:block}
 .btn-auth{width:100%;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:.95rem;font-weight:600;padding:.85rem;cursor:pointer;transition:.15s;margin-top:.25rem}
 .btn-auth:hover{background:#5a52e0}
 .btn-auth:disabled{opacity:.5;cursor:not-allowed}
-.auth-divider{text-align:center;color:var(--muted);font-size:.78rem;margin:1rem 0;position:relative}
-.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border)}
-.auth-divider::before{left:0}.auth-divider::after{right:0}
 .pw-strength{height:4px;border-radius:2px;margin-top:.4rem;transition:.3s;background:var(--border)}
 .pw-strength-text{font-size:.72rem;color:var(--muted);margin-top:.25rem}
 @media(max-width:768px){
@@ -60,8 +59,6 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;mi
   .auth-mobile-logo{display:block}
   .auth-form-wrap{max-width:100%}
 }
-
-/* ── APP ── */
 .app{display:none;flex-direction:column;min-height:100vh}
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:.7rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
 .topbar-logo{font-size:1.1rem;font-weight:800;letter-spacing:-.5px;color:#fff}
@@ -114,14 +111,17 @@ tr:hover td{background:rgba(108,99,255,.06)}
 .badge-inst{background:rgba(245,158,11,.15);color:#fbbf24;font-size:.65rem}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:center;justify-content:center;padding:1rem}
 .modal-bg.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:1.75rem;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:1.75rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
 .modal h3{font-size:1rem;font-weight:700;color:#fff;margin-bottom:1.25rem}
-.form-group-m{margin-bottom:1rem}
-.form-group-m label{font-size:.76rem;color:var(--muted);display:block;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
-.form-group-m input,.form-group-m select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.55rem .75rem;font-size:.875rem;outline:none;transition:.2s}
-.form-group-m input:focus,.form-group-m select:focus{border-color:var(--accent)}
-.form-group-m input::placeholder{color:rgba(160,174,192,.45)}
-.form-group-m select option{background:var(--bg2);color:#fff}
+.mfg{margin-bottom:1rem}
+.mfg label{font-size:.76rem;color:var(--muted);display:block;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+.mfg input,.mfg select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.55rem .75rem;font-size:.875rem;outline:none;transition:.2s}
+.mfg input:focus,.mfg select:focus{border-color:var(--accent)}
+.mfg input::placeholder{color:rgba(160,174,192,.45)}
+.mfg input.invalid{border-color:var(--red)!important}
+.mfg .field-err{color:var(--red);font-size:.75rem;margin-top:.3rem;display:none}
+.mfg .field-err.show{display:block}
+.mfg select option{background:var(--bg2);color:#fff}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
 .modal-actions{display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.25rem}
 .installment-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem}
@@ -145,10 +145,14 @@ tr:hover td{background:rgba(108,99,255,.06)}
 .bar-val{font-size:.74rem;color:var(--muted);width:72px;text-align:right;flex-shrink:0}
 .inv-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:.85rem}
 .inv-name{font-weight:700;font-size:.95rem;color:#fff}
-.inv-type{font-size:.7rem;color:var(--muted);background:var(--bg3);padding:.15rem .5rem;border-radius:5px;border:1px solid var(--border)}
-.inv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-top:.85rem}
+.inv-tag{font-size:.7rem;color:var(--muted);background:var(--bg3);padding:.15rem .5rem;border-radius:5px;border:1px solid var(--border)}
+.inv-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-top:.85rem}
+@media(max-width:600px){.inv-stats{grid-template-columns:repeat(2,1fr)}}
 .inv-stat label{font-size:.7rem;color:var(--muted);display:block;margin-bottom:.2rem;text-transform:uppercase;letter-spacing:.03em}
 .inv-stat span{font-size:.9rem;font-weight:600;color:#fff}
+.yield-mode-tabs{display:flex;background:var(--bg3);border-radius:8px;padding:2px;border:1px solid var(--border);margin-bottom:.75rem}
+.yield-mode-tab{flex:1;text-align:center;padding:.4rem;border-radius:6px;font-size:.78rem;font-weight:500;cursor:pointer;color:var(--muted);transition:.2s;border:none;background:transparent}
+.yield-mode-tab.active{background:var(--accent);color:#fff}
 .report-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
 .report-card h4{font-size:.76rem;color:var(--muted);margin-bottom:.85rem;text-transform:uppercase;letter-spacing:.05em;font-weight:500}
 .progress-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem}
@@ -171,18 +175,19 @@ tr:hover td{background:rgba(108,99,255,.06)}
 .obj-pct{font-size:.82rem;color:var(--accent2);font-weight:600}
 .obj-bar-track{background:var(--bg3);border-radius:8px;height:10px;margin:.75rem 0 .5rem}
 .obj-bar-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:.8s}
-.obj-meta{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted)}
+.obj-meta{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted);flex-wrap:wrap;gap:.25rem}
 .settings-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem}
 .subcat-section{margin-top:1.5rem}
 .subcat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem}
 .subcat-select{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.4rem .7rem;font-size:.82rem;outline:none;min-width:180px}
 .subcat-select option{background:var(--bg2);color:#fff}
 .info-tag{font-size:.7rem;color:var(--muted);background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:.1rem .45rem;display:inline-block}
+.calc-preview{background:rgba(78,205,196,.08);border:1px solid rgba(78,205,196,.2);border-radius:8px;padding:.65rem .85rem;margin-top:.5rem;font-size:.8rem;color:var(--accent2)}
 </style>
 </head>
 <body>
 
-<!-- ── AUTH SCREEN ── -->
+<!-- AUTH -->
 <div id="authScreen" class="auth-screen visible">
   <div class="auth-left">
     <span class="auth-logo">Finance<span>OS</span></span>
@@ -190,54 +195,53 @@ tr:hover td{background:rgba(108,99,255,.06)}
     <div class="auth-features">
       <div class="auth-feat"><div class="auth-feat-icon">💸</div><span class="auth-feat-text">Receitas e gastos com categorias e subcategorias</span></div>
       <div class="auth-feat"><div class="auth-feat-icon">🔄</div><span class="auth-feat-text">Parcelamento automático em múltiplos meses</span></div>
-      <div class="auth-feat"><div class="auth-feat-icon">📈</div><span class="auth-feat-text">Carteira de investimentos com rendimentos</span></div>
+      <div class="auth-feat"><div class="auth-feat-icon">📈</div><span class="auth-feat-text">Carteira de investimentos com rentabilidade automática</span></div>
       <div class="auth-feat"><div class="auth-feat-icon">🔒</div><span class="auth-feat-text">Dados seguros com autenticação e criptografia</span></div>
     </div>
   </div>
   <div class="auth-right">
     <div class="auth-form-wrap">
       <div class="auth-mobile-logo">Finance<span>OS</span></div>
-
-      <!-- TABS -->
       <div class="auth-tabs">
         <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Entrar</button>
         <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Criar conta</button>
       </div>
-
       <!-- LOGIN -->
       <div id="formLogin">
         <div class="auth-title">Bem-vindo de volta</div>
         <p class="auth-subtitle">Entre com sua conta para continuar</p>
-        <span class="auth-error" id="loginErr"></span>
-        <div class="form-group">
+        <div class="auth-alert" id="loginAlert"></div>
+        <div class="fg">
           <label>E-mail</label>
           <input type="email" id="loginEmail" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+          <div class="field-err" id="loginEmailErr">Informe um e-mail válido</div>
         </div>
-        <div class="form-group">
+        <div class="fg">
           <label>Senha</label>
           <div class="pw-wrap">
             <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
             <button class="pw-toggle" onclick="togglePw('loginPassword',this)" tabindex="-1">👁</button>
           </div>
+          <div class="field-err" id="loginPasswordErr">Informe sua senha</div>
         </div>
         <button class="btn-auth" id="btnLogin" onclick="doLogin()">Entrar →</button>
       </div>
-
       <!-- REGISTER -->
       <div id="formRegister" style="display:none">
         <div class="auth-title">Criar conta</div>
         <p class="auth-subtitle">Preencha os dados para se cadastrar</p>
-        <span class="auth-error" id="registerErr"></span>
-        <span class="auth-success" id="registerOk" style="display:none"></span>
-        <div class="form-group">
+        <div class="auth-alert" id="registerAlert"></div>
+        <div class="fg">
           <label>Nome completo</label>
           <input type="text" id="regName" placeholder="Seu nome">
+          <div class="field-err" id="regNameErr">Informe seu nome</div>
         </div>
-        <div class="form-group">
+        <div class="fg">
           <label>E-mail</label>
           <input type="email" id="regEmail" placeholder="seu@email.com">
+          <div class="field-err" id="regEmailErr">Informe um e-mail válido</div>
         </div>
-        <div class="form-group">
+        <div class="fg">
           <label>Senha</label>
           <div class="pw-wrap">
             <input type="password" id="regPassword" placeholder="Mínimo 6 caracteres" oninput="checkPwStrength(this.value)">
@@ -245,13 +249,15 @@ tr:hover td{background:rgba(108,99,255,.06)}
           </div>
           <div class="pw-strength" id="pwStrengthBar"></div>
           <div class="pw-strength-text" id="pwStrengthText"></div>
+          <div class="field-err" id="regPasswordErr">A senha deve ter no mínimo 6 caracteres</div>
         </div>
-        <div class="form-group">
+        <div class="fg">
           <label>Confirmar senha</label>
           <div class="pw-wrap">
             <input type="password" id="regPassword2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')doRegister()">
             <button class="pw-toggle" onclick="togglePw('regPassword2',this)" tabindex="-1">👁</button>
           </div>
+          <div class="field-err" id="regPassword2Err">As senhas não conferem</div>
         </div>
         <button class="btn-auth" id="btnRegister" onclick="doRegister()">Criar conta</button>
       </div>
@@ -259,7 +265,7 @@ tr:hover td{background:rgba(108,99,255,.06)}
   </div>
 </div>
 
-<!-- ── APP ── -->
+<!-- APP -->
 <div id="app" class="app">
   <div class="topbar">
     <div class="topbar-logo">Finance<span>OS</span></div>
@@ -285,6 +291,7 @@ tr:hover td{background:rgba(108,99,255,.06)}
     <button class="nav-btn" onclick="showTab('settings',this)">⚙️ Configurações</button>
   </nav>
   <div class="content">
+
     <div id="tab-dashboard" class="tab active">
       <div class="cards-row" id="dashCards"></div>
       <div class="two-col">
@@ -296,6 +303,7 @@ tr:hover td{background:rgba(108,99,255,.06)}
         <div class="table-wrap"><div id="dashTxTable"></div></div>
       </div>
     </div>
+
     <div id="tab-transactions" class="tab">
       <div class="section-header"><span class="section-title">Transações</span><button class="btn btn-primary" onclick="openTxModal()">+ Adicionar</button></div>
       <div class="filter-row">
@@ -305,15 +313,18 @@ tr:hover td{background:rgba(108,99,255,.06)}
       </div>
       <div class="table-wrap"><div id="txTable"></div></div>
     </div>
+
     <div id="tab-investments" class="tab">
       <div class="section-header"><span class="section-title">Carteira de Investimentos</span><button class="btn btn-primary" onclick="openInvModal()">+ Investimento</button></div>
       <div class="cards-row" id="invSummary"></div>
       <div id="invList"></div>
     </div>
+
     <div id="tab-goals" class="tab">
       <div class="section-header"><span class="section-title">Objetivos Financeiros</span><button class="btn btn-primary" onclick="openModal('addGoal')">+ Objetivo</button></div>
       <div id="goalsList"></div>
     </div>
+
     <div id="tab-reports" class="tab">
       <div class="section-header"><span class="section-title">Relatórios Avançados</span></div>
       <div class="two-col">
@@ -326,6 +337,7 @@ tr:hover td{background:rgba(108,99,255,.06)}
       </div>
       <div class="report-card" id="rptTrend"></div>
     </div>
+
     <div id="tab-settings" class="tab">
       <div class="section-header"><span class="section-title">Categorias, Subcategorias e Configurações</span></div>
       <div class="two-col">
@@ -342,41 +354,50 @@ tr:hover td{background:rgba(108,99,255,.06)}
         <div class="subcat-header">
           <span style="font-size:.82rem;color:var(--muted)">Subcategorias</span>
           <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
-            <select class="subcat-select" id="subcatFilter" onchange="renderSubcatList()"><option value="">Selecione uma categoria</option></select>
+            <select class="subcat-select" id="subcatFilter" onchange="renderSubcatList()"><option value="">Todas as categorias</option></select>
             <button class="btn btn-ghost btn-sm" onclick="openModal('addSubcat')">+ Nova subcategoria</button>
           </div>
         </div>
-        <div class="table-wrap"><div id="subcatList"><div class="empty-state">Selecione uma categoria</div></div></div>
+        <div class="table-wrap"><div id="subcatList"><div class="empty-state">Carregando...</div></div></div>
       </div>
       <div style="margin-top:1.5rem">
         <div class="section-header"><span style="font-size:.82rem;color:var(--muted)">Alterar Senha</span></div>
         <div class="settings-card" style="max-width:360px">
-          <div class="form-group-m"><label>Senha atual</label><input type="password" id="oldPw" placeholder="••••••••"></div>
-          <div class="form-group-m"><label>Nova senha</label><input type="password" id="newPw1" placeholder="Mínimo 6 caracteres"></div>
-          <div class="form-group-m"><label>Confirmar nova senha</label><input type="password" id="newPw2" placeholder="Repita a senha"></div>
+          <div class="mfg"><label>Senha atual</label><input type="password" id="oldPw" placeholder="••••••••"></div>
+          <div class="mfg"><label>Nova senha</label><input type="password" id="newPw1" placeholder="Mínimo 6 caracteres"></div>
+          <div class="mfg"><label>Confirmar nova senha</label><input type="password" id="newPw2" placeholder="Repita a senha"></div>
           <button class="btn btn-primary" onclick="changePassword()">Alterar senha</button>
           <div id="pwChangeMsg" style="font-size:.8rem;margin-top:.5rem"></div>
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
-<!-- MODAIS -->
+<!-- MODAL TRANSAÇÃO -->
 <div class="modal-bg" id="modal-addTx">
   <div class="modal">
     <h3 id="txModalTitle">Nova Transação</h3>
     <input type="hidden" id="txEditId">
     <div class="form-row">
-      <div class="form-group-m"><label>Tipo</label><select id="txType" onchange="updateTxCatOptions()"><option value="receita">Receita</option><option value="gasto">Gasto</option></select></div>
-      <div class="form-group-m"><label>Valor (R$)</label><input type="number" id="txVal" placeholder="0,00" step="0.01"></div>
+      <div class="mfg"><label>Tipo</label><select id="txType" onchange="updateTxCatOptions()"><option value="receita">Receita</option><option value="gasto">Gasto</option></select></div>
+      <div class="mfg">
+        <label>Valor (R$) <span style="color:var(--red)">*</span></label>
+        <input type="number" id="txVal" placeholder="0,00" step="0.01" oninput="updateInstallPreview()">
+        <div class="field-err" id="txValErr">Informe o valor</div>
+      </div>
     </div>
     <div class="form-row">
-      <div class="form-group-m"><label>Categoria</label><select id="txCat" onchange="updateSubcatOptions()"></select></div>
-      <div class="form-group-m"><label>Subcategoria</label><select id="txSubcat"><option value="">— nenhuma —</option></select></div>
+      <div class="mfg">
+        <label>Categoria <span style="color:var(--red)">*</span></label>
+        <select id="txCat" onchange="updateSubcatOptions()"></select>
+        <div class="field-err" id="txCatErr">Selecione uma categoria</div>
+      </div>
+      <div class="mfg"><label>Subcategoria <span class="info-tag">opcional</span></label><select id="txSubcat"><option value="">— nenhuma —</option></select></div>
     </div>
-    <div class="form-group-m"><label>Descrição <span class="info-tag">opcional</span></label><input type="text" id="txDesc" placeholder="Ex: Compra no mercado..."></div>
-    <div class="form-group-m"><label>Observação <span class="info-tag">opcional</span></label><input type="text" id="txObs" placeholder="Detalhes adicionais..."></div>
+    <div class="mfg"><label>Descrição <span class="info-tag">opcional</span></label><input type="text" id="txDesc" placeholder="Ex: Compra no mercado..."></div>
+    <div class="mfg"><label>Observação <span class="info-tag">opcional</span></label><input type="text" id="txObs" placeholder="Detalhes adicionais..."></div>
     <div class="installment-box">
       <div class="box-title">🔄 Parcelamento / Recorrência</div>
       <div class="toggle-row">
@@ -385,53 +406,108 @@ tr:hover td{background:rgba(108,99,255,.06)}
       </div>
       <div id="installmentFields" style="display:none">
         <div class="form-row">
-          <div class="form-group-m"><label>Nº de parcelas</label><input type="number" id="txInstallTotal" min="2" max="120" value="2" oninput="updateInstallPreview()"></div>
-          <div class="form-group-m"><label>Mês da 1ª parcela</label><input type="month" id="txInstallStart" oninput="updateInstallPreview()"></div>
+          <div class="mfg"><label>Nº de parcelas <span style="color:var(--red)">*</span></label><input type="number" id="txInstallTotal" min="2" max="120" value="2" oninput="updateInstallPreview()"></div>
+          <div class="mfg"><label>Mês da 1ª parcela <span style="color:var(--red)">*</span></label><input type="month" id="txInstallStart" oninput="updateInstallPreview()"></div>
         </div>
         <div id="installPreview" style="font-size:.78rem;color:var(--accent2);margin-top:.25rem"></div>
       </div>
       <div id="noInstallFields">
-        <div class="form-group-m" style="margin-bottom:0"><label>Data</label><input type="date" id="txDate"></div>
+        <div class="mfg" style="margin-bottom:0">
+          <label>Data <span style="color:var(--red)">*</span></label>
+          <input type="date" id="txDate">
+          <div class="field-err" id="txDateErr">Informe a data</div>
+        </div>
       </div>
     </div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addTx')">Cancelar</button><button class="btn btn-primary" onclick="saveTx()">Salvar</button></div>
   </div>
 </div>
 
+<!-- MODAL INVESTIMENTO -->
 <div class="modal-bg" id="modal-addInv">
   <div class="modal">
     <h3 id="invModalTitle">Novo Investimento</h3>
     <input type="hidden" id="invEditId">
-    <div class="form-group-m"><label>Nome</label><input type="text" id="invName" placeholder="Ex: Tesouro Selic..."></div>
-    <div class="form-row">
-      <div class="form-group-m"><label>Tipo</label><select id="invType"><option>Renda Fixa</option><option>Renda Variável</option><option>Fundo Imobiliário</option><option>Ações</option><option>Cripto</option><option>Poupança</option><option>Outro</option></select></div>
-      <div class="form-group-m"><label>Instituição</label><input type="text" id="invInst" placeholder="Ex: Nubank, XP..."></div>
+    <div class="mfg">
+      <label>Nome <span style="color:var(--red)">*</span></label>
+      <input type="text" id="invName" placeholder="Ex: Tesouro Selic, Ações PETR4...">
+      <div class="field-err" id="invNameErr">Informe o nome</div>
     </div>
     <div class="form-row">
-      <div class="form-group-m"><label>Valor investido (R$)</label><input type="number" id="invVal" placeholder="0,00" step="0.01"></div>
-      <div class="form-group-m"><label>Rendimento acumulado (R$)</label><input type="number" id="invYield" placeholder="0,00" step="0.01"></div>
+      <div class="mfg"><label>Tipo</label><select id="invType"><option>Renda Fixa</option><option>Renda Variável</option><option>Fundo Imobiliário</option><option>Ações</option><option>Cripto</option><option>Poupança</option><option>Outro</option></select></div>
+      <div class="mfg"><label>Instituição <span class="info-tag">opcional</span></label><input type="text" id="invInst" placeholder="Ex: Nubank, XP..."></div>
     </div>
-    <div class="form-group-m"><label>Data de início</label><input type="date" id="invDate"></div>
+    <div class="form-row">
+      <div class="mfg">
+        <label>Valor investido (R$) <span style="color:var(--red)">*</span></label>
+        <input type="number" id="invVal" placeholder="0,00" step="0.01" oninput="calcInvPreview()">
+        <div class="field-err" id="invValErr">Informe o valor investido</div>
+      </div>
+      <div class="mfg"><label>Data de início <span class="info-tag">opcional</span></label><input type="date" id="invDate" oninput="calcInvPreview()"></div>
+    </div>
+
+    <!-- MODO RENDIMENTO -->
+    <div class="mfg">
+      <label>Modo de rendimento</label>
+      <div class="yield-mode-tabs">
+        <button class="yield-mode-tab active" id="yieldTabManual" onclick="setYieldMode('manual')">Manual (R$)</button>
+        <button class="yield-mode-tab" id="yieldTabPct" onclick="setYieldMode('pct')">Por % ao mês</button>
+        <button class="yield-mode-tab" id="yieldTabPctAnual" onclick="setYieldMode('pctAnual')">Por % ao ano</button>
+      </div>
+    </div>
+
+    <div id="yieldManualFields">
+      <div class="mfg">
+        <label>Rendimento acumulado (R$) <span class="info-tag">opcional</span></label>
+        <input type="number" id="invYield" placeholder="0,00" step="0.01">
+      </div>
+    </div>
+
+    <div id="yieldPctFields" style="display:none">
+      <div class="mfg">
+        <label>Taxa mensal (%) <span style="color:var(--red)">*</span></label>
+        <input type="number" id="invRateMes" placeholder="Ex: 1.05" step="0.01" oninput="calcInvPreview()">
+      </div>
+      <div id="invCalcPreview" class="calc-preview" style="display:none"></div>
+    </div>
+
+    <div id="yieldPctAnualFields" style="display:none">
+      <div class="mfg">
+        <label>Taxa anual (%) <span style="color:var(--red)">*</span></label>
+        <input type="number" id="invRateAnual" placeholder="Ex: 12.5" step="0.01" oninput="calcInvPreview()">
+      </div>
+      <div id="invCalcPreviewAnual" class="calc-preview" style="display:none"></div>
+    </div>
+
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addInv')">Cancelar</button><button class="btn btn-primary" onclick="saveInv()">Salvar</button></div>
   </div>
 </div>
 
+<!-- MODAL OBJETIVO -->
 <div class="modal-bg" id="modal-addGoal">
   <div class="modal">
     <h3>Novo Objetivo</h3>
-    <div class="form-group-m"><label>Nome do objetivo</label><input type="text" id="goalName" placeholder="Ex: Viagem, Reserva emergência..."></div>
-    <div class="form-row">
-      <div class="form-group-m"><label>Valor meta (R$)</label><input type="number" id="goalTarget" placeholder="10000" step="0.01"></div>
-      <div class="form-group-m"><label>Valor atual (R$)</label><input type="number" id="goalCurrent" placeholder="0" step="0.01"></div>
+    <div class="mfg">
+      <label>Nome do objetivo <span style="color:var(--red)">*</span></label>
+      <input type="text" id="goalName" placeholder="Ex: Viagem, Reserva emergência...">
+      <div class="field-err" id="goalNameErr">Informe o nome do objetivo</div>
     </div>
-    <div class="form-group-m"><label>Data limite</label><input type="date" id="goalDeadline"></div>
+    <div class="form-row">
+      <div class="mfg">
+        <label>Valor meta (R$) <span style="color:var(--red)">*</span></label>
+        <input type="number" id="goalTarget" placeholder="10000" step="0.01">
+        <div class="field-err" id="goalTargetErr">Informe o valor da meta</div>
+      </div>
+      <div class="mfg"><label>Valor atual (R$) <span class="info-tag">opcional</span></label><input type="number" id="goalCurrent" placeholder="0" step="0.01"></div>
+    </div>
+    <div class="mfg"><label>Data limite <span class="info-tag">opcional</span></label><input type="date" id="goalDeadline"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addGoal')">Cancelar</button><button class="btn btn-primary" onclick="saveGoal()">Salvar</button></div>
   </div>
 </div>
 
-<div class="modal-bg" id="modal-addCatExp"><div class="modal"><h3>Nova Categoria de Gasto</h3><div class="form-group-m"><label>Nome</label><input type="text" id="newCatExpName" placeholder="Ex: Saúde..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addCatExp')">Cancelar</button><button class="btn btn-primary" onclick="saveCat('exp')">Salvar</button></div></div></div>
-<div class="modal-bg" id="modal-addCatRec"><div class="modal"><h3>Nova Categoria de Receita</h3><div class="form-group-m"><label>Nome</label><input type="text" id="newCatRecName" placeholder="Ex: Freelance..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addCatRec')">Cancelar</button><button class="btn btn-primary" onclick="saveCat('rec')">Salvar</button></div></div></div>
-<div class="modal-bg" id="modal-addSubcat"><div class="modal"><h3>Nova Subcategoria</h3><div class="form-group-m"><label>Categoria pai</label><select id="newSubcatCat"></select></div><div class="form-group-m"><label>Nome</label><input type="text" id="newSubcatName" placeholder="Ex: Mercado..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addSubcat')">Cancelar</button><button class="btn btn-primary" onclick="saveSubcat()">Salvar</button></div></div></div>
+<div class="modal-bg" id="modal-addCatExp"><div class="modal"><h3>Nova Categoria de Gasto</h3><div class="mfg"><label>Nome</label><input type="text" id="newCatExpName" placeholder="Ex: Saúde..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addCatExp')">Cancelar</button><button class="btn btn-primary" onclick="saveCat('exp')">Salvar</button></div></div></div>
+<div class="modal-bg" id="modal-addCatRec"><div class="modal"><h3>Nova Categoria de Receita</h3><div class="mfg"><label>Nome</label><input type="text" id="newCatRecName" placeholder="Ex: Freelance..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addCatRec')">Cancelar</button><button class="btn btn-primary" onclick="saveCat('rec')">Salvar</button></div></div></div>
+<div class="modal-bg" id="modal-addSubcat"><div class="modal"><h3>Nova Subcategoria</h3><div class="mfg"><label>Categoria pai</label><select id="newSubcatCat"></select></div><div class="mfg"><label>Nome</label><input type="text" id="newSubcatName" placeholder="Ex: Mercado..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addSubcat')">Cancelar</button><button class="btn btn-primary" onclick="saveSubcat()">Salvar</button></div></div></div>
 
 <div class="modal-bg" id="modal-delTx">
   <div class="modal"><h3>Excluir transação</h3>
@@ -452,8 +528,8 @@ let authToken=localStorage.getItem('financeOS_token')||'';
 let currentUser=null;
 let db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[]};
 let pendingDelId=null,pendingDelGroup=null;
+let currentYieldMode='manual';
 
-// ── API ──────────────────────────────────────────────
 async function apiFetch(method,path,body){
   setSyncing(true);
   try{
@@ -462,10 +538,7 @@ async function apiFetch(method,path,body){
     const r=await fetch(API+path,{method,headers,body:body?JSON.stringify(body):undefined});
     const text=await r.text();
     const data=text?JSON.parse(text):{};
-    if(!r.ok){
-      if(r.status===401){logout();return null;}
-      throw new Error(data.error||'Erro desconhecido');
-    }
+    if(!r.ok){if(r.status===401){logout();return null;}throw new Error(data.error||'Erro desconhecido');}
     setSyncing(false);return data;
   }catch(e){setSyncing(false,true);throw e;}
 }
@@ -479,39 +552,53 @@ function fmt(v){return'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFrac
 function fmtD(d){if(!d)return'';const[y,m,day]=d.split('-');return`${day}/${m}/${y}`;}
 function toast(m,c='var(--accent)'){const t=document.getElementById('toast');t.textContent=m;t.style.background=c;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 
-// ── AUTH UI ──────────────────────────────────────────
+// ── AUTH ────────────────────────────────────────────
+function showAlert(id,msg,type='error'){
+  const el=document.getElementById(id);
+  el.textContent=msg;el.className='auth-alert '+type;
+}
+function hideAlert(id){
+  const el=document.getElementById(id);el.className='auth-alert';el.textContent='';
+}
+function showFieldErr(id){document.getElementById(id).classList.add('show');}
+function hideFieldErr(id){document.getElementById(id).classList.remove('show');}
+function markInvalid(inputId,errId){
+  document.getElementById(inputId).classList.add('invalid');
+  document.getElementById(errId).classList.add('show');
+}
+function clearInvalid(inputId,errId){
+  document.getElementById(inputId).classList.remove('invalid');
+  document.getElementById(errId).classList.remove('show');
+}
 function switchAuthTab(tab){
   document.getElementById('formLogin').style.display=tab==='login'?'block':'none';
   document.getElementById('formRegister').style.display=tab==='register'?'block':'none';
   document.getElementById('tabLogin').className='auth-tab'+(tab==='login'?' active':'');
   document.getElementById('tabRegister').className='auth-tab'+(tab==='register'?' active':'');
-  document.getElementById('loginErr').textContent='';
-  document.getElementById('registerErr').textContent='';
+  hideAlert('loginAlert');hideAlert('registerAlert');
 }
-function togglePw(id,btn){
-  const inp=document.getElementById(id);
-  inp.type=inp.type==='password'?'text':'password';
-  btn.textContent=inp.type==='password'?'👁':'🙈';
-}
+function togglePw(id,btn){const inp=document.getElementById(id);inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'👁':'🙈';}
 function checkPwStrength(pw){
   const bar=document.getElementById('pwStrengthBar'),txt=document.getElementById('pwStrengthText');
-  if(!pw){bar.style.background='var(--border)';bar.style.width='0';txt.textContent='';return;}
+  if(!pw){bar.style.width='0';txt.textContent='';return;}
   let score=0;
   if(pw.length>=6)score++;if(pw.length>=10)score++;
   if(/[A-Z]/.test(pw))score++;if(/[0-9]/.test(pw))score++;if(/[^A-Za-z0-9]/.test(pw))score++;
   const levels=[{c:'var(--red)',t:'Muito fraca'},{c:'var(--red)',t:'Fraca'},{c:'var(--amber)',t:'Razoável'},{c:'var(--amber)',t:'Boa'},{c:'var(--green)',t:'Forte'},{c:'var(--green)',t:'Muito forte'}];
   const l=levels[Math.min(score,5)];
-  bar.style.background=l.c;bar.style.width=((score+1)/6*100)+'%';bar.style.height='4px';bar.style.borderRadius='2px';
+  bar.style.cssText=`background:${l.c};width:${((score+1)/6*100)}%;height:4px;border-radius:2px`;
   txt.style.color=l.c;txt.textContent=l.t;
 }
 
 async function doLogin(){
   const email=document.getElementById('loginEmail').value.trim();
   const password=document.getElementById('loginPassword').value;
-  const errEl=document.getElementById('loginErr');
-  const btn=document.getElementById('btnLogin');
-  if(!email||!password){errEl.textContent='Preencha e-mail e senha';return;}
-  btn.disabled=true;btn.textContent='Entrando...';errEl.textContent='';
+  hideAlert('loginAlert');
+  let valid=true;
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){markInvalid('loginEmail','loginEmailErr');valid=false;}else{clearInvalid('loginEmail','loginEmailErr');}
+  if(!password){markInvalid('loginPassword','loginPasswordErr');valid=false;}else{clearInvalid('loginPassword','loginPasswordErr');}
+  if(!valid)return;
+  const btn=document.getElementById('btnLogin');btn.disabled=true;btn.textContent='Entrando...';
   try{
     const data=await apiFetch('POST','/auth/login',{email,password});
     if(!data){btn.disabled=false;btn.textContent='Entrar →';return;}
@@ -519,7 +606,10 @@ async function doLogin(){
     localStorage.setItem('financeOS_token',authToken);
     localStorage.setItem('financeOS_user',JSON.stringify(currentUser));
     await enterApp();
-  }catch(e){errEl.textContent=e.message;btn.disabled=false;btn.textContent='Entrar →';}
+  }catch(e){
+    showAlert('loginAlert',e.message==='Failed to fetch'?'Não foi possível conectar ao servidor. Tente novamente.':e.message);
+    btn.disabled=false;btn.textContent='Entrar →';
+  }
 }
 
 async function doRegister(){
@@ -527,13 +617,14 @@ async function doRegister(){
   const email=document.getElementById('regEmail').value.trim();
   const password=document.getElementById('regPassword').value;
   const password2=document.getElementById('regPassword2').value;
-  const errEl=document.getElementById('registerErr');
-  const btn=document.getElementById('btnRegister');
-  errEl.textContent='';
-  if(!name||!email||!password){errEl.textContent='Preencha todos os campos';return;}
-  if(password.length<6){errEl.textContent='A senha deve ter no mínimo 6 caracteres';return;}
-  if(password!==password2){errEl.textContent='As senhas não conferem';return;}
-  btn.disabled=true;btn.textContent='Criando conta...';
+  hideAlert('registerAlert');
+  let valid=true;
+  if(!name){markInvalid('regName','regNameErr');valid=false;}else{clearInvalid('regName','regNameErr');}
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){markInvalid('regEmail','regEmailErr');valid=false;}else{clearInvalid('regEmail','regEmailErr');}
+  if(!password||password.length<6){markInvalid('regPassword','regPasswordErr');valid=false;}else{clearInvalid('regPassword','regPasswordErr');}
+  if(password!==password2){markInvalid('regPassword2','regPassword2Err');valid=false;}else{clearInvalid('regPassword2','regPassword2Err');}
+  if(!valid)return;
+  const btn=document.getElementById('btnRegister');btn.disabled=true;btn.textContent='Criando conta...';
   try{
     const data=await apiFetch('POST','/auth/register',{name,email,password});
     if(!data){btn.disabled=false;btn.textContent='Criar conta';return;}
@@ -541,7 +632,10 @@ async function doRegister(){
     localStorage.setItem('financeOS_token',authToken);
     localStorage.setItem('financeOS_user',JSON.stringify(currentUser));
     await enterApp();
-  }catch(e){errEl.textContent=e.message;btn.disabled=false;btn.textContent='Criar conta';}
+  }catch(e){
+    showAlert('registerAlert',e.message);
+    btn.disabled=false;btn.textContent='Criar conta';
+  }
 }
 
 async function enterApp(){
@@ -552,39 +646,26 @@ async function enterApp(){
   document.getElementById('monthSel').value=new Date().getMonth().toString();
   renderAll();
 }
-
 function logout(){
   authToken='';currentUser=null;
-  localStorage.removeItem('financeOS_token');
-  localStorage.removeItem('financeOS_user');
+  localStorage.removeItem('financeOS_token');localStorage.removeItem('financeOS_user');
   db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[]};
   document.getElementById('app').style.display='none';
   document.getElementById('authScreen').classList.add('visible');
-  document.getElementById('loginEmail').value='';
-  document.getElementById('loginPassword').value='';
-  document.getElementById('loginErr').textContent='';
-  document.getElementById('btnLogin').disabled=false;
-  document.getElementById('btnLogin').textContent='Entrar →';
-  switchAuthTab('login');
+  document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';
+  document.getElementById('btnLogin').disabled=false;document.getElementById('btnLogin').textContent='Entrar →';
+  hideAlert('loginAlert');switchAuthTab('login');
 }
-
-// Auto-login se tiver token salvo
 async function tryAutoLogin(){
   if(!authToken)return;
-  try{
-    const savedUser=localStorage.getItem('financeOS_user');
-    if(savedUser)currentUser=JSON.parse(savedUser);
-    await enterApp();
-  }catch(e){logout();}
+  try{const savedUser=localStorage.getItem('financeOS_user');if(savedUser)currentUser=JSON.parse(savedUser);await enterApp();}
+  catch(e){logout();}
 }
 
 async function loadAll(){
   const[txs,invs,goals,cats,subcats]=await Promise.all([
-    apiFetch('GET','/transactions'),
-    apiFetch('GET','/investments'),
-    apiFetch('GET','/goals'),
-    apiFetch('GET','/categories'),
-    apiFetch('GET','/subcategories'),
+    apiFetch('GET','/transactions'),apiFetch('GET','/investments'),
+    apiFetch('GET','/goals'),apiFetch('GET','/categories'),apiFetch('GET','/subcategories'),
   ]);
   db.transactions=(txs||[]).map(t=>({...t,desc:t.description}));
   db.investments=invs||[];db.goals=goals||[];
@@ -608,7 +689,7 @@ function renderDashboard(){
   const exp=txs.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0);
   const bal=rec-exp;
   const invTotal=db.investments.reduce((s,i)=>s+parseFloat(i.value||0),0);
-  const invYield=db.investments.reduce((s,i)=>s+parseFloat(i.yield||0),0);
+  const invYield=db.investments.reduce((s,i)=>s+calcInvYield(i),0);
   document.getElementById('dashCards').innerHTML=`
     <div class="metric"><label>Receitas</label><div class="val pos">${fmt(rec)}</div></div>
     <div class="metric"><label>Gastos</label><div class="val neg">${fmt(exp)}</div></div>
@@ -681,7 +762,7 @@ function updateInstallPreview(){
   const n=parseInt(document.getElementById('txInstallTotal').value)||0;
   const val=parseFloat(document.getElementById('txVal').value)||0;
   const start=document.getElementById('txInstallStart').value;
-  if(!n||!start){document.getElementById('installPreview').textContent='';return;}
+  if(!n||!start||!document.getElementById('txInstallCheck').checked){document.getElementById('installPreview').textContent='';return;}
   const[y,m]=start.split('-').map(Number);
   const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const last=new Date(y,m-1+n-1,1);
@@ -691,11 +772,14 @@ function openTxModal(){
   document.getElementById('txEditId').value='';
   document.getElementById('txModalTitle').textContent='Nova Transação';
   document.getElementById('txType').value='gasto';
-  document.getElementById('txDesc').value='';document.getElementById('txVal').value='';
-  document.getElementById('txObs').value='';document.getElementById('txDate').value=new Date().toISOString().split('T')[0];
+  ['txDesc','txVal','txObs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('txDate').value=new Date().toISOString().split('T')[0];
   document.getElementById('txInstallCheck').checked=false;document.getElementById('txInstallTotal').value=2;
   document.getElementById('installmentFields').style.display='none';document.getElementById('noInstallFields').style.display='block';
-  document.getElementById('installPreview').textContent='';updateTxCatOptions();openModal('addTx');
+  document.getElementById('installPreview').textContent='';
+  ['txValErr','txCatErr','txDateErr'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  ['txVal','txCat'].forEach(id=>document.getElementById(id).classList.remove('invalid'));
+  updateTxCatOptions();openModal('addTx');
 }
 function editTx(id){
   const t=db.transactions.find(x=>x.id===id);if(!t)return;
@@ -718,10 +802,17 @@ async function saveTx(){
   const description=document.getElementById('txDesc').value.trim()||null;
   const obs=document.getElementById('txObs').value.trim()||null;
   const isInstall=document.getElementById('txInstallCheck').checked;
-  if(!value||!category){toast('Preencha valor e categoria','var(--red)');return;}
+  let valid=true;
+  if(!value||value<=0){markInvalid('txVal','txValErr');valid=false;}else{clearInvalid('txVal','txValErr');}
+  if(!category){markInvalid('txCat','txCatErr');valid=false;}else{clearInvalid('txCat','txCatErr');}
+  if(!isInstall){
+    const date=document.getElementById('txDate').value;
+    if(!date){document.getElementById('txDateErr').classList.add('show');valid=false;}else{document.getElementById('txDateErr').classList.remove('show');}
+  }
+  if(!valid)return;
   const eid=document.getElementById('txEditId').value;
   if(eid){
-    const date=document.getElementById('txDate').value;if(!date){toast('Informe a data','var(--red)');return;}
+    const date=document.getElementById('txDate').value;
     try{
       const r=await apiFetch('PATCH',`/transactions/${eid}`,{description,value,date,type,category,subcategory,obs});
       const i=db.transactions.findIndex(x=>x.id===eid);
@@ -749,7 +840,7 @@ async function saveTx(){
       closeModal('addTx');renderAll();toast(`${total} parcelas criadas!`);
     }catch(e){toast(e.message,'var(--red)');}
   }else{
-    const date=document.getElementById('txDate').value;if(!date){toast('Informe a data','var(--red)');return;}
+    const date=document.getElementById('txDate').value;
     try{
       const r=await apiFetch('POST','/transactions',{description,value,date,type,category,subcategory,obs,installment_total:1,installment_current:1});
       if(r&&r[0])db.transactions.unshift({...r[0],desc:r[0].description});
@@ -779,28 +870,110 @@ async function confirmDelTx(all){
     closeModal('delTx');renderAll();
   }catch(e){toast(e.message,'var(--red)');}
 }
+
+// ── INVESTIMENTOS ────────────────────────────────────
+function setYieldMode(mode){
+  currentYieldMode=mode;
+  document.getElementById('yieldTabManual').className='yield-mode-tab'+(mode==='manual'?' active':'');
+  document.getElementById('yieldTabPct').className='yield-mode-tab'+(mode==='pct'?' active':'');
+  document.getElementById('yieldTabPctAnual').className='yield-mode-tab'+(mode==='pctAnual'?' active':'');
+  document.getElementById('yieldManualFields').style.display=mode==='manual'?'block':'none';
+  document.getElementById('yieldPctFields').style.display=mode==='pct'?'block':'none';
+  document.getElementById('yieldPctAnualFields').style.display=mode==='pctAnual'?'block':'none';
+  calcInvPreview();
+}
+
+function calcInvYield(inv){
+  if(!inv.yield_mode||inv.yield_mode==='manual')return parseFloat(inv.yield||0);
+  const val=parseFloat(inv.value||0);
+  const rate=parseFloat(inv.yield_rate||0);
+  if(!val||!rate||!inv.date)return parseFloat(inv.yield||0);
+  const start=new Date(inv.date+'T12:00:00');
+  const now=new Date();
+  const months=(now.getFullYear()-start.getFullYear())*12+(now.getMonth()-start.getMonth());
+  if(months<=0)return 0;
+  if(inv.yield_mode==='pct'){
+    return parseFloat((val*Math.pow(1+rate/100,months)-val).toFixed(2));
+  }else{
+    const monthlyRate=Math.pow(1+rate/100,1/12)-1;
+    return parseFloat((val*Math.pow(1+monthlyRate,months)-val).toFixed(2));
+  }
+}
+
+function calcInvPreview(){
+  const val=parseFloat(document.getElementById('invVal').value)||0;
+  const date=document.getElementById('invDate').value;
+  if(!val||!date){
+    document.getElementById('invCalcPreview').style.display='none';
+    document.getElementById('invCalcPreviewAnual').style.display='none';
+    return;
+  }
+  const start=new Date(date+'T12:00:00');
+  const now=new Date();
+  const months=Math.max(0,(now.getFullYear()-start.getFullYear())*12+(now.getMonth()-start.getMonth()));
+  if(currentYieldMode==='pct'){
+    const rate=parseFloat(document.getElementById('invRateMes').value)||0;
+    if(!rate){document.getElementById('invCalcPreview').style.display='none';return;}
+    const yld=val*Math.pow(1+rate/100,months)-val;
+    const total=val+yld;
+    const el=document.getElementById('invCalcPreview');
+    el.style.display='block';
+    el.innerHTML=`📊 ${months} meses — Rendimento calculado: <strong>${fmt(yld)}</strong> | Total: <strong>${fmt(total)}</strong>`;
+  }else if(currentYieldMode==='pctAnual'){
+    const rate=parseFloat(document.getElementById('invRateAnual').value)||0;
+    if(!rate){document.getElementById('invCalcPreviewAnual').style.display='none';return;}
+    const monthlyRate=Math.pow(1+rate/100,1/12)-1;
+    const yld=val*Math.pow(1+monthlyRate,months)-val;
+    const total=val+yld;
+    const el=document.getElementById('invCalcPreviewAnual');
+    el.style.display='block';
+    el.innerHTML=`📊 ${months} meses — Rendimento calculado: <strong>${fmt(yld)}</strong> | Total: <strong>${fmt(total)}</strong>`;
+  }
+}
+
 function openInvModal(){
   document.getElementById('invEditId').value='';document.getElementById('invModalTitle').textContent='Novo Investimento';
-  ['invName','invVal','invDate','invYield','invInst'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('invType').value='Renda Fixa';openModal('addInv');
+  ['invName','invVal','invDate','invYield','invInst','invRateMes','invRateAnual'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('invType').value='Renda Fixa';
+  document.getElementById('invNameErr').classList.remove('show');document.getElementById('invValErr').classList.remove('show');
+  document.getElementById('invName').classList.remove('invalid');document.getElementById('invVal').classList.remove('invalid');
+  document.getElementById('invCalcPreview').style.display='none';document.getElementById('invCalcPreviewAnual').style.display='none';
+  setYieldMode('manual');openModal('addInv');
 }
 function editInv(id){
   const inv=db.investments.find(x=>x.id===id);if(!inv)return;
   document.getElementById('invEditId').value=id;document.getElementById('invModalTitle').textContent='Editar Investimento';
   document.getElementById('invName').value=inv.name;document.getElementById('invType').value=inv.type;
   document.getElementById('invVal').value=inv.value;document.getElementById('invDate').value=inv.date||'';
-  document.getElementById('invYield').value=inv.yield||0;document.getElementById('invInst').value=inv.institution||'';
-  openModal('addInv');
+  document.getElementById('invInst').value=inv.institution||'';
+  const mode=inv.yield_mode||'manual';
+  setYieldMode(mode);
+  if(mode==='manual')document.getElementById('invYield').value=inv.yield||0;
+  else if(mode==='pct')document.getElementById('invRateMes').value=inv.yield_rate||'';
+  else if(mode==='pctAnual')document.getElementById('invRateAnual').value=inv.yield_rate||'';
+  calcInvPreview();openModal('addInv');
 }
 async function saveInv(){
   const name=document.getElementById('invName').value.trim();
   const type=document.getElementById('invType').value;
   const value=parseFloat(document.getElementById('invVal').value)||0;
   const date=document.getElementById('invDate').value||null;
-  const yield_val=parseFloat(document.getElementById('invYield').value)||0;
   const institution=document.getElementById('invInst').value.trim();
-  if(!name||!value){toast('Preencha nome e valor','var(--red)');return;}
-  const payload={name,type,value,date,yield:yield_val,institution};
+  let valid=true;
+  if(!name){markInvalid('invName','invNameErr');valid=false;}else{clearInvalid('invName','invNameErr');}
+  if(!value){markInvalid('invVal','invValErr');valid=false;}else{clearInvalid('invVal','invValErr');}
+  if(!valid)return;
+  let yield_val=0,yield_mode=currentYieldMode,yield_rate=null;
+  if(yield_mode==='manual'){
+    yield_val=parseFloat(document.getElementById('invYield').value)||0;
+  }else if(yield_mode==='pct'){
+    yield_rate=parseFloat(document.getElementById('invRateMes').value)||0;
+    yield_val=0;
+  }else if(yield_mode==='pctAnual'){
+    yield_rate=parseFloat(document.getElementById('invRateAnual').value)||0;
+    yield_val=0;
+  }
+  const payload={name,type,value,date,yield:yield_val,yield_mode,yield_rate,institution};
   const eid=document.getElementById('invEditId').value;
   try{
     if(eid){
@@ -818,7 +991,7 @@ async function delInv(id){
 }
 function renderInvestments(){
   const total=db.investments.reduce((s,i)=>s+parseFloat(i.value||0),0);
-  const yields=db.investments.reduce((s,i)=>s+parseFloat(i.yield||0),0);
+  const yields=db.investments.reduce((s,i)=>s+calcInvYield(i),0);
   const pct=total>0?((yields/total)*100).toFixed(2):0;
   document.getElementById('invSummary').innerHTML=`
     <div class="metric"><label>Total investido</label><div class="val neutral">${fmt(total)}</div></div>
@@ -827,143 +1000,25 @@ function renderInvestments(){
     <div class="metric"><label>Rentabilidade</label><div class="val pos">${pct}%</div></div>`;
   if(!db.investments.length){document.getElementById('invList').innerHTML='<div class="empty-state">Nenhum investimento cadastrado</div>';return;}
   document.getElementById('invList').innerHTML=db.investments.map(inv=>{
-    const p=parseFloat(inv.value)>0?((parseFloat(inv.yield||0)/parseFloat(inv.value))*100).toFixed(2):0;
+    const yld=calcInvYield(inv);
+    const p=parseFloat(inv.value)>0?((yld/parseFloat(inv.value))*100).toFixed(2):0;
+    const modeLabel=inv.yield_mode==='pct'?`${inv.yield_rate}% a.m.`:inv.yield_mode==='pctAnual'?`${inv.yield_rate}% a.a.`:'Manual';
     return`<div class="inv-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div><div class="inv-name">${inv.name}</div><div style="display:flex;gap:.4rem;margin-top:.3rem"><span class="inv-type">${inv.type}</span>${inv.institution?`<span class="inv-type">${inv.institution}</span>`:''}</div></div>
+        <div>
+          <div class="inv-name">${inv.name}</div>
+          <div style="display:flex;gap:.4rem;margin-top:.3rem;flex-wrap:wrap">
+            <span class="inv-tag">${inv.type}</span>
+            ${inv.institution?`<span class="inv-tag">${inv.institution}</span>`:''}
+            <span class="inv-tag" style="color:var(--accent2);border-color:rgba(78,205,196,.3)">📊 ${modeLabel}</span>
+          </div>
+        </div>
         <div style="display:flex;gap:.35rem"><button class="btn btn-ghost btn-sm" onclick="editInv('${inv.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="delInv('${inv.id}')">🗑</button></div>
       </div>
       <div class="inv-stats">
         <div class="inv-stat"><label>Investido</label><span>${fmt(inv.value)}</span></div>
-        <div class="inv-stat"><label>Rendimento</label><span style="color:var(--green)">${fmt(inv.yield||0)}</span></div>
-        <div class="inv-stat"><label>Total / Rent.</label><span>${fmt(parseFloat(inv.value)+parseFloat(inv.yield||0))} <span style="font-size:.7rem;color:var(--green)">(${p}%)</span></span></div>
+        <div class="inv-stat"><label>Rendimento</label><span style="color:${yld>=0?'var(--green)':'var(--red)'}">${fmt(yld)}</span></div>
+        <div class="inv-stat"><label>Total</label><span>${fmt(parseFloat(inv.value)+yld)}</span></div>
+        <div class="inv-stat"><label>Rentab.</label><span style="color:${yld>=0?'var(--green)':'var(--red)'}">${p}%</span></div>
       </div>
-      ${inv.date?`<div style="font-size:.7rem;color:var(--muted);margin-top:.6rem">Desde ${fmtD(inv.date)}</div>`:''}
-    </div>`;
-  }).join('');
-}
-function renderGoals(){
-  if(!db.goals.length){document.getElementById('goalsList').innerHTML='<div class="empty-state">Nenhum objetivo cadastrado</div>';return;}
-  document.getElementById('goalsList').innerHTML=db.goals.map(g=>{
-    const pct=Math.min((parseFloat(g.current||0)/parseFloat(g.target))*100,100);
-    return`<div class="obj-card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div class="obj-name">${g.name}</div>
-        <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="obj-pct">${pct.toFixed(1)}%</span>
-          <button class="btn btn-ghost btn-sm" onclick="editGoal('${g.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="delGoal('${g.id}')">🗑</button>
-        </div>
-      </div>
-      <div class="obj-bar-track"><div class="obj-bar-fill" style="width:${pct}%"></div></div>
-      <div class="obj-meta">
-        <span>${fmt(g.current||0)} de ${fmt(g.target)}</span>
-        <span>Faltam ${fmt(Math.max(0,parseFloat(g.target)-parseFloat(g.current||0)))}</span>
-        ${g.deadline?`<span>Prazo: ${fmtD(g.deadline)}</span>`:''}
-      </div>
-    </div>`;
-  }).join('');
-}
-async function saveGoal(){
-  const name=document.getElementById('goalName').value.trim();
-  const target=parseFloat(document.getElementById('goalTarget').value)||0;
-  const current=parseFloat(document.getElementById('goalCurrent').value)||0;
-  const deadline=document.getElementById('goalDeadline').value||null;
-  if(!name||!target){toast('Preencha nome e meta','var(--red)');return;}
-  try{const r=await apiFetch('POST','/goals',{name,target,current,deadline});if(r&&r[0])db.goals.push(r[0]);closeModal('addGoal');renderAll();toast('Objetivo salvo!');['goalName','goalTarget','goalCurrent','goalDeadline'].forEach(id=>document.getElementById(id).value='');}catch(e){toast(e.message,'var(--red)');}
-}
-async function editGoal(id){
-  const g=db.goals.find(x=>x.id===id);if(!g)return;
-  const nc=prompt('Valor atual (R$):',g.current||0);if(nc===null)return;
-  const current=parseFloat(nc)||0;
-  try{await apiFetch('PATCH',`/goals/${id}`,{current});const i=db.goals.findIndex(x=>x.id===id);if(i>-1)db.goals[i]={...g,current};renderAll();toast('Objetivo atualizado!');}catch(e){toast(e.message,'var(--red)');}
-}
-async function delGoal(id){
-  if(!confirm('Remover objetivo?'))return;
-  try{await apiFetch('DELETE',`/goals/${id}`);db.goals=db.goals.filter(g=>g.id!==id);renderAll();toast('Removido','var(--amber)');}catch(e){toast(e.message,'var(--red)');}
-}
-function renderReports(){
-  const allTx=db.transactions,now=new Date();
-  const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const mTx=filterTx(allTx);
-  const mRec=mTx.filter(t=>t.type==='receita').reduce((s,t)=>s+parseFloat(t.value),0);
-  const mExp=mTx.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0);
-  const mBal=mRec-mExp,savRate=mRec>0?((mBal/mRec)*100).toFixed(1):0;
-  document.getElementById('rptFluxo').innerHTML=`<h4>Fluxo de caixa</h4>
-    <div class="trend-item"><span class="trend-month">Receitas</span><span class="trend-val" style="color:var(--green)">${fmt(mRec)}</span></div>
-    <div class="trend-item"><span class="trend-month">Gastos</span><span class="trend-val" style="color:var(--red)">${fmt(mExp)}</span></div>
-    <div class="trend-item"><span class="trend-month">Saldo</span><span class="trend-val" style="color:${mBal>=0?'var(--green)':'var(--red)'}">${fmt(mBal)}</span></div>
-    <div class="trend-item" style="border:none"><span class="trend-month">Taxa de poupança</span><span class="trend-val" style="color:var(--accent2)">${savRate}%</span></div>`;
-  const expMap={};mTx.filter(t=>t.type==='gasto').forEach(t=>{expMap[t.category]=(expMap[t.category]||0)+parseFloat(t.value);});
-  const expS=Object.entries(expMap).sort((a,b)=>b[1]-a[1]),expMax=expS[0]?.[1]||1;
-  document.getElementById('rptCatExp').innerHTML=`<h4>Gastos por categoria</h4>`+(expS.length?expS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${c}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/expMax*100).toFixed(1)}%;background:var(--red)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
-  const invMap={};db.investments.forEach(i=>{invMap[i.type]=(invMap[i.type]||0)+parseFloat(i.value||0);});
-  const invS=Object.entries(invMap).sort((a,b)=>b[1]-a[1]),invMax=invS[0]?.[1]||1;
-  document.getElementById('rptInvRet').innerHTML=`<h4>Distribuição de investimentos</h4>`+(invS.length?invS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${c}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/invMax*100).toFixed(1)}%;background:var(--accent)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
-  const evo=[];
-  for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1),m=d.getMonth(),y=d.getFullYear();const txM=allTx.filter(t=>{if(!t.date)return false;const td=new Date(t.date+'T12:00:00');return td.getMonth()===m&&td.getFullYear()===y;});evo.push({label:months[m],rec:txM.filter(t=>t.type==='receita').reduce((s,t)=>s+parseFloat(t.value),0),exp:txM.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0)});}
-  document.getElementById('rptEvo').innerHTML=`<h4>Evolução mensal (6 meses)</h4>`+evo.map(e=>`<div class="trend-item"><span class="trend-month">${e.label}</span><div style="display:flex;gap:1rem"><span class="trend-val" style="color:var(--green)">${fmt(e.rec)}</span><span class="trend-val" style="color:var(--red)">${fmt(e.exp)}</span></div></div>`).join('');
-  const m12=[];
-  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1),m=d.getMonth(),y=d.getFullYear();const txM=allTx.filter(t=>{if(!t.date)return false;const td=new Date(t.date+'T12:00:00');return td.getMonth()===m&&td.getFullYear()===y;});m12.push({label:months[m]+'/'+String(y).slice(-2),rec:txM.filter(t=>t.type==='receita').reduce((s,t)=>s+parseFloat(t.value),0),exp:txM.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0)});}
-  const maxVal=Math.max(...m12.flatMap(e=>[e.rec,e.exp]),1);
-  document.getElementById('rptTrend').innerHTML=`<h4>Tendência anual — receitas vs gastos</h4>`+m12.map(e=>`<div class="trend-item"><span class="trend-month" style="min-width:65px">${e.label}</span><div style="flex:1;display:flex;flex-direction:column;gap:3px;padding:0 .75rem"><div class="bar-track" style="height:7px"><div class="bar-fill" style="width:${(e.rec/maxVal*100).toFixed(1)}%;background:var(--green)"></div></div><div class="bar-track" style="height:7px"><div class="bar-fill" style="width:${(e.exp/maxVal*100).toFixed(1)}%;background:var(--red)"></div></div></div><div style="display:flex;gap:.75rem;font-size:.75rem;font-weight:600"><span style="color:var(--green)">${fmt(e.rec)}</span><span style="color:var(--red)">${fmt(e.exp)}</span></div></div>`).join('');
-}
-function renderSettings(){
-  const allCats=[...db.catExp,...db.catRec];
-  const makeList=(cats,isExp)=>!cats.length?'<div class="empty-state">Sem categorias</div>':`<table><tbody>`+cats.map(c=>`<tr><td style="color:#fff">${c.name}</td><td style="text-align:right"><button class="btn btn-danger btn-sm" onclick="delCat('${c.id}','${isExp?'exp':'rec'}')">🗑</button></td></tr>`).join('')+'</tbody></table>';
-  document.getElementById('catExpList').innerHTML=makeList(db.catExp,true);
-  document.getElementById('catRecList').innerHTML=makeList(db.catRec,false);
-  const sf=document.getElementById('subcatFilter'),curSF=sf.value;
-  sf.innerHTML='<option value="">Selecione uma categoria</option>'+allCats.map(c=>`<option value="${c.id}"${c.id===curSF?' selected':''}>${c.name} (${db.catExp.find(x=>x.id===c.id)?'gasto':'receita'})</option>`).join('');
-  renderSubcatList();
-  document.getElementById('newSubcatCat').innerHTML=allCats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-}
-function renderSubcatList(){
-  const catId=document.getElementById('subcatFilter').value;
-  if(!catId){document.getElementById('subcatList').innerHTML='<div class="empty-state">Selecione uma categoria</div>';return;}
-  const subs=db.subcategories.filter(s=>s.category_id===catId);
-  if(!subs.length){document.getElementById('subcatList').innerHTML='<div class="empty-state">Nenhuma subcategoria cadastrada</div>';return;}
-  document.getElementById('subcatList').innerHTML=`<table><tbody>`+subs.map(s=>`<tr><td style="color:#fff">${s.name}</td><td style="text-align:right"><button class="btn btn-danger btn-sm" onclick="delSubcat('${s.id}')">🗑</button></td></tr>`).join('')+'</tbody></table>';
-}
-async function saveCat(type){
-  const inputId=type==='exp'?'newCatExpName':'newCatRecName';
-  const name=document.getElementById(inputId).value.trim();
-  if(!name){toast('Digite o nome','var(--red)');return;}
-  try{const r=await apiFetch('POST','/categories',{name,type});if(r&&r[0]){if(type==='exp')db.catExp.push(r[0]);else db.catRec.push(r[0]);}closeModal(type==='exp'?'addCatExp':'addCatRec');renderAll();toast('Categoria criada!');document.getElementById(inputId).value='';}catch(e){toast(e.message,'var(--red)');}
-}
-async function delCat(id,type){
-  if(!confirm('Remover esta categoria? As subcategorias vinculadas também serão removidas.'))return;
-  try{await apiFetch('DELETE',`/categories/${id}`);if(type==='exp')db.catExp=db.catExp.filter(c=>c.id!==id);else db.catRec=db.catRec.filter(c=>c.id!==id);db.subcategories=db.subcategories.filter(s=>s.category_id!==id);renderAll();toast('Removida','var(--amber)');}catch(e){toast(e.message,'var(--red)');}
-}
-async function saveSubcat(){
-  const catId=document.getElementById('newSubcatCat').value;
-  const name=document.getElementById('newSubcatName').value.trim();
-  if(!catId||!name){toast('Preencha categoria e nome','var(--red)');return;}
-  try{const r=await apiFetch('POST','/subcategories',{category_id:catId,name});if(r&&r[0])db.subcategories.push(r[0]);closeModal('addSubcat');renderAll();toast('Subcategoria criada!');document.getElementById('newSubcatName').value='';}catch(e){toast(e.message,'var(--red)');}
-}
-async function delSubcat(id){
-  if(!confirm('Remover esta subcategoria?'))return;
-  try{await apiFetch('DELETE',`/subcategories/${id}`);db.subcategories=db.subcategories.filter(s=>s.id!==id);renderSubcatList();toast('Removida','var(--amber)');}catch(e){toast(e.message,'var(--red)');}
-}
-async function changePassword(){
-  const current_password=document.getElementById('oldPw').value;
-  const new_password=document.getElementById('newPw1').value;
-  const confirm_password=document.getElementById('newPw2').value;
-  const msg=document.getElementById('pwChangeMsg');
-  if(!current_password||!new_password){msg.style.color='var(--red)';msg.textContent='Preencha todos os campos';return;}
-  if(new_password.length<6){msg.style.color='var(--red)';msg.textContent='A nova senha deve ter no mínimo 6 caracteres';return;}
-  if(new_password!==confirm_password){msg.style.color='var(--red)';msg.textContent='As senhas não conferem';return;}
-  try{
-    await apiFetch('PATCH','/auth/password',{current_password,new_password});
-    msg.style.color='var(--green)';msg.textContent='Senha alterada com sucesso!';
-    ['oldPw','newPw1','newPw2'].forEach(id=>document.getElementById(id).value='');
-    setTimeout(()=>msg.textContent='',3000);
-  }catch(e){msg.style.color='var(--red)';msg.textContent=e.message;}
-}
-document.querySelectorAll('.modal-bg').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
-
-// Init
-tryAutoLogin();
-</script>
-</body>
-</html>
+      ${inv.date?`<div style="font-size:.7rem;color:var(--muted);margin-top:.6rem"

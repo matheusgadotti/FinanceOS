@@ -525,59 +525,71 @@ function renderReports(){
     });
   }
 
-  // ── GRÁFICO DE BARRAS AGRUPADAS (12 meses) ────────
+  // ── GRÁFICO COMBINADO — BARRAS + LINHA DE SALDO ──
   (()=>{
-    const W=700,H=220,pad={t:20,r:20,b:50,l:60};
+    const W=700,H=280,pad={t:24,r:24,b:56,l:64};
     const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
     const maxV=Math.max(...m12.flatMap(e=>[e.rec,e.exp]),1);
-    const bw=Math.floor(cW/m12.length);
-    const gap=4,bPair=bw-gap;
-    const bSingle=Math.floor(bPair/2)-1;
-    let bars='',labels='',gridLines='';
-    // grid
-    [0,0.25,0.5,0.75,1].forEach(p=>{
-      const y=pad.t+cH*(1-p);
-      const v=maxV*p;
-      gridLines+=`<line x1="${pad.l}" y1="${y}" x2="${pad.l+cW}" y2="${y}" stroke="#2e3354" stroke-width="1"/>`;
-      gridLines+=`<text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="9" fill="#a0aec0">${v>=1000?(v/1000).toFixed(0)+'k':v.toFixed(0)}</text>`;
-    });
-    m12.forEach((e,i)=>{
-      const x=pad.l+i*bw+gap/2;
-      const hR=e.rec>0?Math.max(2,(e.rec/maxV)*cH):0;
-      const hE=e.exp>0?Math.max(2,(e.exp/maxV)*cH):0;
-      bars+=`<rect x="${x}" y="${pad.t+cH-hR}" width="${bSingle}" height="${hR}" fill="#22c55e" rx="2" opacity=".85"/>`;
-      bars+=`<rect x="${x+bSingle+1}" y="${pad.t+cH-hE}" width="${bSingle}" height="${hE}" fill="#ef4444" rx="2" opacity=".85"/>`;
-      labels+=`<text x="${x+bSingle}" y="${H-pad.b+14}" text-anchor="middle" font-size="8.5" fill="#a0aec0">${e.label}</text>`;
-    });
-    const legend=`<rect x="${pad.l}" y="${H-12}" width="10" height="10" fill="#22c55e" rx="2"/><text x="${pad.l+14}" y="${H-4}" font-size="10" fill="#e2e8f0">Receitas</text><rect x="${pad.l+80}" y="${H-12}" width="10" height="10" fill="#ef4444" rx="2"/><text x="${pad.l+94}" y="${H-4}" font-size="10" fill="#e2e8f0">Gastos</text>`;
-    document.getElementById('rptBarChart').innerHTML=`<h4>Receitas vs Gastos — 12 meses</h4><svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px">${gridLines}${bars}${labels}${legend}</svg>`;
-  })();
-
-  // ── GRÁFICO DE LINHA — SALDO ACUMULADO ───────────
-  (()=>{
-    const W=700,H=180,pad={t:20,r:20,b:40,l:60};
-    const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
     const saldos=m12.map(e=>e.rec-e.exp);
-    const minS=Math.min(...saldos,0),maxS=Math.max(...saldos,1);
-    const range=maxS-minS||1;
-    const toY=v=>pad.t+cH*(1-(v-minS)/range);
-    const toX=i=>pad.l+(i/(m12.length-1||1))*cW;
-    let pts='',dots='',labels='',gridLines='';
-    // zero line
-    const zeroY=toY(0);
-    gridLines+=`<line x1="${pad.l}" y1="${zeroY}" x2="${pad.l+cW}" y2="${zeroY}" stroke="#6c63ff" stroke-width="1" stroke-dasharray="4,3" opacity=".4"/>`;
-    [minS,0,maxS].filter((v,i,a)=>a.indexOf(v)===i).forEach(v=>{
+    const minS=Math.min(...saldos,0);
+    const maxS=Math.max(...saldos,maxV);
+    // usar mesma escala para barras e linha
+    const scaleMax=Math.max(maxV,maxS,1);
+    const scaleMin=Math.min(minS,0);
+    const range=scaleMax-scaleMin||1;
+    const toY=v=>pad.t+cH*(1-(v-scaleMin)/range);
+    const bw=cW/m12.length;
+    const bGap=bw*0.12;
+    const bPair=bw-bGap*2;
+    const bSingle=Math.floor(bPair/2)-1;
+    let bars='',labels='',gridLines='',linePts='',dots='';
+    // grid lines
+    const gridVals=[0,0.25,0.5,0.75,1].map(p=>scaleMin+range*p);
+    gridVals.forEach(v=>{
       const y=toY(v);
-      gridLines+=`<line x1="${pad.l}" y1="${y}" x2="${pad.l+cW}" y2="${y}" stroke="#2e3354" stroke-width="1"/>`;
-      gridLines+=`<text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="9" fill="#a0aec0">${v>=0?'':'-'}${Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(0)+'k':Math.abs(v).toFixed(0)}</text>`;
+      gridLines+=`<line x1="${pad.l}" y1="${y.toFixed(1)}" x2="${pad.l+cW}" y2="${y.toFixed(1)}" stroke="#2e3354" stroke-width="1"/>`;
+      const lbl=Math.abs(v)>=1000?(v/1000).toFixed(1)+'k':v.toFixed(0);
+      gridLines+=`<text x="${pad.l-8}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#a0aec0">${lbl}</text>`;
     });
-    saldos.forEach((s,i)=>{
-      const x=toX(i),y=toY(s);
-      if(i>0){const px=toX(i-1),py=toY(saldos[i-1]);pts+=`<line x1="${px}" y1="${py}" x2="${x}" y2="${y}" stroke="${s>=0?'#4ecdc4':'#ef4444'}" stroke-width="2"/>`;}
-      dots+=`<circle cx="${x}" cy="${y}" r="3.5" fill="${s>=0?'#4ecdc4':'#ef4444'}" stroke="#1a1d26" stroke-width="1.5"/>`;
-      labels+=`<text x="${x}" y="${H-pad.b+14}" text-anchor="middle" font-size="8.5" fill="#a0aec0">${m12[i].label}</text>`;
+    // zero line highlight
+    if(scaleMin<0){
+      const zy=toY(0);
+      gridLines+=`<line x1="${pad.l}" y1="${zy.toFixed(1)}" x2="${pad.l+cW}" y2="${zy.toFixed(1)}" stroke="#6c63ff" stroke-width="1.5" stroke-dasharray="5,3" opacity=".5"/>`;
+    }
+    const baseY=toY(Math.max(scaleMin,0));
+    m12.forEach((e,i)=>{
+      const x=pad.l+i*bw+bGap;
+      // barra receita
+      const hR=Math.max(0,(e.rec-Math.max(scaleMin,0))/range*cH);
+      if(hR>0)bars+=`<rect x="${x.toFixed(1)}" y="${(baseY-hR).toFixed(1)}" width="${bSingle}" height="${hR.toFixed(1)}" fill="#22c55e" rx="2" opacity=".8"/>`;
+      // barra gasto
+      const hE=Math.max(0,(e.exp-Math.max(scaleMin,0))/range*cH);
+      if(hE>0)bars+=`<rect x="${(x+bSingle+1).toFixed(1)}" y="${(baseY-hE).toFixed(1)}" width="${bSingle}" height="${hE.toFixed(1)}" fill="#ef4444" rx="2" opacity=".8"/>`;
+      // label mês
+      labels+=`<text x="${(x+bSingle).toFixed(1)}" y="${(H-pad.b+16).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="#a0aec0">${e.label}</text>`;
+      // linha saldo
+      const sx=(pad.l+(i+0.5)*bw).toFixed(1);
+      const sy=toY(saldos[i]).toFixed(1);
+      const col=saldos[i]>=0?'#4ecdc4':'#f87171';
+      if(i>0){
+        const psx=(pad.l+(i-0.5)*bw).toFixed(1);
+        const psy=toY(saldos[i-1]).toFixed(1);
+        linePts+=`<line x1="${psx}" y1="${psy}" x2="${sx}" y2="${sy}" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/>`;
+      }
+      dots+=`<circle cx="${sx}" cy="${sy}" r="4" fill="${col}" stroke="#1a1d26" stroke-width="1.5"/>`;
     });
-    document.getElementById('rptLineChart').innerHTML=`<h4>Saldo mensal</h4><svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px">${gridLines}${pts}${dots}${labels}</svg>`;
+    // legenda
+    const ly=H-10;
+    const legend=`
+      <rect x="${pad.l}" y="${ly-10}" width="10" height="10" fill="#22c55e" rx="2"/>
+      <text x="${pad.l+14}" y="${ly}" font-size="10" fill="#e2e8f0">Receitas</text>
+      <rect x="${pad.l+75}" y="${ly-10}" width="10" height="10" fill="#ef4444" rx="2"/>
+      <text x="${pad.l+89}" y="${ly}" font-size="10" fill="#e2e8f0">Gastos</text>
+      <line x1="${pad.l+155}" y1="${ly-5}" x2="${pad.l+170}" y2="${ly-5}" stroke="#4ecdc4" stroke-width="2.5"/>
+      <circle cx="${pad.l+162}" cy="${ly-5}" r="3" fill="#4ecdc4"/>
+      <text x="${pad.l+174}" y="${ly}" font-size="10" fill="#e2e8f0">Saldo</text>`;
+    document.getElementById('rptBarChart').innerHTML=`<h4>Receitas vs Gastos + Saldo — 12 meses</h4><div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:400px;max-width:${W}px">${gridLines}${bars}${linePts}${dots}${labels}${legend}</svg></div>`;
+    document.getElementById('rptLineChart').innerHTML='';
   })();
 
   // ── FLUXO DE CAIXA ───────────────────────────────

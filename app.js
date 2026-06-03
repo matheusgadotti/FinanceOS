@@ -512,25 +512,130 @@ function renderReports(){
   const mRec=mTx.filter(t=>t.type==='receita').reduce((s,t)=>s+parseFloat(t.value),0);
   const mExp=mTx.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0);
   const mBal=mRec-mExp,savRate=mRec>0?((mBal/mRec)*100).toFixed(1):0;
+
+  // ── 12 meses de dados ─────────────────────────────
+  const m12=[];
+  for(let i=11;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1),m=d.getMonth(),y=d.getFullYear();
+    const txM=allTx.filter(t=>{if(!t.date)return false;const td=new Date(t.date+'T12:00:00');return td.getMonth()===m&&td.getFullYear()===y;});
+    m12.push({
+      label:months[m]+'/'+String(y).slice(-2),
+      rec:txM.filter(t=>t.type==='receita').reduce((s,t)=>s+parseFloat(t.value),0),
+      exp:txM.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0)
+    });
+  }
+
+  // ── GRÁFICO DE BARRAS AGRUPADAS (12 meses) ────────
+  (()=>{
+    const W=700,H=220,pad={t:20,r:20,b:50,l:60};
+    const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+    const maxV=Math.max(...m12.flatMap(e=>[e.rec,e.exp]),1);
+    const bw=Math.floor(cW/m12.length);
+    const gap=4,bPair=bw-gap;
+    const bSingle=Math.floor(bPair/2)-1;
+    let bars='',labels='',gridLines='';
+    // grid
+    [0,0.25,0.5,0.75,1].forEach(p=>{
+      const y=pad.t+cH*(1-p);
+      const v=maxV*p;
+      gridLines+=`<line x1="${pad.l}" y1="${y}" x2="${pad.l+cW}" y2="${y}" stroke="#2e3354" stroke-width="1"/>`;
+      gridLines+=`<text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="9" fill="#a0aec0">${v>=1000?(v/1000).toFixed(0)+'k':v.toFixed(0)}</text>`;
+    });
+    m12.forEach((e,i)=>{
+      const x=pad.l+i*bw+gap/2;
+      const hR=e.rec>0?Math.max(2,(e.rec/maxV)*cH):0;
+      const hE=e.exp>0?Math.max(2,(e.exp/maxV)*cH):0;
+      bars+=`<rect x="${x}" y="${pad.t+cH-hR}" width="${bSingle}" height="${hR}" fill="#22c55e" rx="2" opacity=".85"/>`;
+      bars+=`<rect x="${x+bSingle+1}" y="${pad.t+cH-hE}" width="${bSingle}" height="${hE}" fill="#ef4444" rx="2" opacity=".85"/>`;
+      labels+=`<text x="${x+bSingle}" y="${H-pad.b+14}" text-anchor="middle" font-size="8.5" fill="#a0aec0">${e.label}</text>`;
+    });
+    const legend=`<rect x="${pad.l}" y="${H-12}" width="10" height="10" fill="#22c55e" rx="2"/><text x="${pad.l+14}" y="${H-4}" font-size="10" fill="#e2e8f0">Receitas</text><rect x="${pad.l+80}" y="${H-12}" width="10" height="10" fill="#ef4444" rx="2"/><text x="${pad.l+94}" y="${H-4}" font-size="10" fill="#e2e8f0">Gastos</text>`;
+    document.getElementById('rptBarChart').innerHTML=`<h4>Receitas vs Gastos — 12 meses</h4><svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px">${gridLines}${bars}${labels}${legend}</svg>`;
+  })();
+
+  // ── GRÁFICO DE LINHA — SALDO ACUMULADO ───────────
+  (()=>{
+    const W=700,H=180,pad={t:20,r:20,b:40,l:60};
+    const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+    const saldos=m12.map(e=>e.rec-e.exp);
+    const minS=Math.min(...saldos,0),maxS=Math.max(...saldos,1);
+    const range=maxS-minS||1;
+    const toY=v=>pad.t+cH*(1-(v-minS)/range);
+    const toX=i=>pad.l+(i/(m12.length-1||1))*cW;
+    let pts='',dots='',labels='',gridLines='';
+    // zero line
+    const zeroY=toY(0);
+    gridLines+=`<line x1="${pad.l}" y1="${zeroY}" x2="${pad.l+cW}" y2="${zeroY}" stroke="#6c63ff" stroke-width="1" stroke-dasharray="4,3" opacity=".4"/>`;
+    [minS,0,maxS].filter((v,i,a)=>a.indexOf(v)===i).forEach(v=>{
+      const y=toY(v);
+      gridLines+=`<line x1="${pad.l}" y1="${y}" x2="${pad.l+cW}" y2="${y}" stroke="#2e3354" stroke-width="1"/>`;
+      gridLines+=`<text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="9" fill="#a0aec0">${v>=0?'':'-'}${Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(0)+'k':Math.abs(v).toFixed(0)}</text>`;
+    });
+    saldos.forEach((s,i)=>{
+      const x=toX(i),y=toY(s);
+      if(i>0){const px=toX(i-1),py=toY(saldos[i-1]);pts+=`<line x1="${px}" y1="${py}" x2="${x}" y2="${y}" stroke="${s>=0?'#4ecdc4':'#ef4444'}" stroke-width="2"/>`;}
+      dots+=`<circle cx="${x}" cy="${y}" r="3.5" fill="${s>=0?'#4ecdc4':'#ef4444'}" stroke="#1a1d26" stroke-width="1.5"/>`;
+      labels+=`<text x="${x}" y="${H-pad.b+14}" text-anchor="middle" font-size="8.5" fill="#a0aec0">${m12[i].label}</text>`;
+    });
+    document.getElementById('rptLineChart').innerHTML=`<h4>Saldo mensal</h4><svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px">${gridLines}${pts}${dots}${labels}</svg>`;
+  })();
+
+  // ── FLUXO DE CAIXA ───────────────────────────────
   document.getElementById('rptFluxo').innerHTML=`<h4>Fluxo de caixa</h4>
     <div class="trend-item"><span class="trend-month">Receitas</span><span class="trend-val" style="color:var(--green)">${fmt(mRec)}</span></div>
     <div class="trend-item"><span class="trend-month">Gastos</span><span class="trend-val" style="color:var(--red)">${fmt(mExp)}</span></div>
     <div class="trend-item"><span class="trend-month">Saldo</span><span class="trend-val" style="color:${mBal>=0?'var(--green)':'var(--red)'}">${fmt(mBal)}</span></div>
     <div class="trend-item" style="border:none"><span class="trend-month">Taxa de poupança</span><span class="trend-val" style="color:var(--accent2)">${savRate}%</span></div>`;
+
+  // ── EVOLUÇÃO 6 MESES ─────────────────────────────
+  const evo=m12.slice(-6);
+  document.getElementById('rptEvo').innerHTML=`<h4>Evolução mensal (6 meses)</h4>`+evo.map(e=>`<div class="trend-item"><span class="trend-month">${e.label}</span><div style="display:flex;gap:1rem"><span class="trend-val" style="color:var(--green)">${fmt(e.rec)}</span><span class="trend-val" style="color:var(--red)">${fmt(e.exp)}</span></div></div>`).join('');
+
+  // ── GASTOS POR CATEGORIA ─────────────────────────
   const expMap={};mTx.filter(t=>t.type==='gasto').forEach(t=>{expMap[t.category]=(expMap[t.category]||0)+parseFloat(t.value);});
   const expS=Object.entries(expMap).sort((a,b)=>b[1]-a[1]),expMax=expS[0]?.[1]||1;
   document.getElementById('rptCatExp').innerHTML=`<h4>Gastos por categoria</h4>`+(expS.length?expS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${c}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/expMax*100).toFixed(1)}%;background:var(--red)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
+
+  // ── RECEITAS POR CATEGORIA ────────────────────────
+  const recMap={};mTx.filter(t=>t.type==='receita').forEach(t=>{recMap[t.category]=(recMap[t.category]||0)+parseFloat(t.value);});
+  const recS=Object.entries(recMap).sort((a,b)=>b[1]-a[1]),recMax=recS[0]?.[1]||1;
+  document.getElementById('rptCatRec').innerHTML=`<h4>Receitas por categoria</h4>`+(recS.length?recS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${c}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/recMax*100).toFixed(1)}%;background:var(--green)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
+
+  // ── DISTRIBUIÇÃO INVESTIMENTOS ────────────────────
   const invMap={};db.investments.forEach(i=>{invMap[i.type]=(invMap[i.type]||0)+parseFloat(i.value||0);});
   const invS=Object.entries(invMap).sort((a,b)=>b[1]-a[1]),invMax=invS[0]?.[1]||1;
   document.getElementById('rptInvRet').innerHTML=`<h4>Distribuição de investimentos</h4>`+(invS.length?invS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${c}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/invMax*100).toFixed(1)}%;background:var(--accent)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
-  const evo=[];
-  for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1),m=d.getMonth(),y=d.getFullYear();const txM=allTx.filter(t=>{if(!t.date)return false;const td=new Date(t.date+'T12:00:00');return td.getMonth()===m&&td.getFullYear()===y;});evo.push({label:months[m],rec:txM.filter(t=>t.type==='receita').reduce((s,t)=>s+parseFloat(t.value),0),exp:txM.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0)});}
-  document.getElementById('rptEvo').innerHTML=`<h4>Evolução mensal (6 meses)</h4>`+evo.map(e=>`<div class="trend-item"><span class="trend-month">${e.label}</span><div style="display:flex;gap:1rem"><span class="trend-val" style="color:var(--green)">${fmt(e.rec)}</span><span class="trend-val" style="color:var(--red)">${fmt(e.exp)}</span></div></div>`).join('');
-  const m12=[];
-  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1),m=d.getMonth(),y=d.getFullYear();const txM=allTx.filter(t=>{if(!t.date)return false;const td=new Date(t.date+'T12:00:00');return td.getMonth()===m&&td.getFullYear()===y;});m12.push({label:months[m]+'/'+String(y).slice(-2),rec:txM.filter(t=>t.type==='receita').reduce((s,t)=>s+parseFloat(t.value),0),exp:txM.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0)});}
+
+  // ── DONUT — GASTOS VS RECEITAS ────────────────────
+  (()=>{
+    const total=mRec+mExp;
+    if(!total){document.getElementById('rptDonut').innerHTML='<h4>Proporção receitas vs gastos</h4><div class="empty-state">Sem dados</div>';return;}
+    const R=70,cx=90,cy=90,stroke=22;
+    const pctRec=mRec/total,pctExp=mExp/total;
+    const circ=2*Math.PI*R;
+    const dRec=circ*pctRec,dExp=circ*pctExp;
+    const recArc=`stroke-dasharray="${dRec} ${circ}" stroke-dashoffset="0"`;
+    const expArc=`stroke-dasharray="${dExp} ${circ}" stroke-dashoffset="${-dRec}"`;
+    const svg=`<svg viewBox="0 0 200 180" style="width:160px;flex-shrink:0">
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#22263a" stroke-width="${stroke}"/>
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#22c55e" stroke-width="${stroke}" ${recArc} transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#ef4444" stroke-width="${stroke}" ${expArc} transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round"/>
+      <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="11" fill="#a0aec0">Saldo</text>
+      <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="13" font-weight="bold" fill="${mBal>=0?'#22c55e':'#ef4444'}">${fmt(mBal)}</text>
+    </svg>`;
+    const legend=`<div style="display:flex;flex-direction:column;gap:.6rem;justify-content:center">
+      <div><div style="width:10px;height:10px;background:#22c55e;border-radius:50%;display:inline-block;margin-right:.4rem"></div><span style="font-size:.78rem;color:#a0aec0">Receitas</span><div style="font-size:.9rem;font-weight:600;color:#22c55e;margin-left:1rem">${fmt(mRec)} (${(pctRec*100).toFixed(0)}%)</div></div>
+      <div><div style="width:10px;height:10px;background:#ef4444;border-radius:50%;display:inline-block;margin-right:.4rem"></div><span style="font-size:.78rem;color:#a0aec0">Gastos</span><div style="font-size:.9rem;font-weight:600;color:#ef4444;margin-left:1rem">${fmt(mExp)} (${(pctExp*100).toFixed(0)}%)</div></div>
+    </div>`;
+    document.getElementById('rptDonut').innerHTML=`<h4>Proporção receitas vs gastos</h4><div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">${svg}${legend}</div>`;
+  })();
+
+  // ── TENDÊNCIA ANUAL ───────────────────────────────
   const maxVal=Math.max(...m12.flatMap(e=>[e.rec,e.exp]),1);
   document.getElementById('rptTrend').innerHTML=`<h4>Tendência anual — receitas vs gastos</h4>`+m12.map(e=>`<div class="trend-item"><span class="trend-month" style="min-width:65px">${e.label}</span><div style="flex:1;display:flex;flex-direction:column;gap:3px;padding:0 .75rem"><div class="bar-track" style="height:7px"><div class="bar-fill" style="width:${(e.rec/maxVal*100).toFixed(1)}%;background:var(--green)"></div></div><div class="bar-track" style="height:7px"><div class="bar-fill" style="width:${(e.exp/maxVal*100).toFixed(1)}%;background:var(--red)"></div></div></div><div style="display:flex;gap:.75rem;font-size:.75rem;font-weight:600"><span style="color:var(--green)">${fmt(e.rec)}</span><span style="color:var(--red)">${fmt(e.exp)}</span></div></div>`).join('');
 }
+
+
 function renderSettings(){
   const allCats=[...db.catExp,...db.catRec];
   const makeList=(cats,isExp)=>!cats.length?'<div class="empty-state">Sem categorias</div>':`<table><tbody>`+cats.map(c=>`<tr><td style="color:#fff">${c.name}</td><td style="text-align:right"><button class="btn btn-danger btn-sm" onclick="delCat('${c.id}','${isExp?'exp':'rec'}')">🗑</button></td></tr>`).join('')+'</tbody></table>';

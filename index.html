@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 <title>FinanceOS</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -263,8 +262,22 @@ tr:hover td{background:rgba(108,99,255,.06)}
     </div>
     <div id="tab-reports" class="tab">
       <div class="section-header"><span class="section-title">Relatórios Avançados</span></div>
-      <div class="two-col"><div class="report-card" id="rptFluxo"></div><div class="report-card" id="rptEvo"></div></div>
-      <div class="two-col"><div class="report-card" id="rptCatExp"></div><div class="report-card" id="rptInvRet"></div></div>
+      <!-- Gráfico de barras mensal -->
+      <div class="report-card" id="rptBarChart" style="overflow-x:auto"></div>
+      <!-- Linha de saldo -->
+      <div class="report-card" id="rptLineChart" style="overflow-x:auto"></div>
+      <div class="two-col">
+        <div class="report-card" id="rptFluxo"></div>
+        <div class="report-card" id="rptEvo"></div>
+      </div>
+      <div class="two-col">
+        <div class="report-card" id="rptCatExp"></div>
+        <div class="report-card" id="rptCatRec"></div>
+      </div>
+      <div class="two-col">
+        <div class="report-card" id="rptInvRet"></div>
+        <div class="report-card" id="rptDonut"></div>
+      </div>
       <div class="report-card" id="rptTrend"></div>
     </div>
     <div id="tab-settings" class="tab">

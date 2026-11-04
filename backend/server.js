@@ -1,4 +1,5 @@
 require('dotenv').config();
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -27,8 +28,28 @@ app.disable('x-powered-by');
 // Quantidade de proxies na frente do servidor (o Render usa proxy). Usado para descobrir o IP real do cliente.
 const trustProxy = parseInt(process.env.TRUST_PROXY, 10);
 app.set('trust proxy', Number.isNaN(trustProxy) ? 1 : trustProxy);
+// Cabeçalhos de segurança. A API só devolve JSON, então pode bloquear tudo que é de página
+// (scripts, frames) e pedir para navegadores e proxies não guardarem os dados financeiros.
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+    'Referrer-Policy': 'no-referrer',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Cache-Control': 'no-store',
+  });
+  next();
+});
+
 app.use(express.json({ limit: '100kb' }));
-app.use(cors({ origin: '*' }));
+
+// Sites que podem chamar a API, separados por vírgula (ex.: https://meusite.com).
+// Sem a variável, qualquer site pode chamar: isso não expõe dados, porque o login
+// usa token no cabeçalho, e não cookie, mas restringir é mais seguro.
+const corsOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
+app.use(cors({ origin: corsOrigins.length ? corsOrigins : '*', maxAge: 600 }));
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -185,6 +206,10 @@ const signToken = userId => jwt.sign({ userId }, JWT_SECRET, { algorithm: 'HS256
 // bcrypt só considera os primeiros 72 bytes da senha.
 const passwordTooLong = pw => Buffer.byteLength(pw, 'utf8') > 72;
 
+// Hash usado quando o e-mail não existe: o login gasta o mesmo tempo com e sem conta,
+// para que não dê para descobrir quem é cadastrado medindo o tempo de resposta.
+const DUMMY_HASH = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 12);
+
 // ── HEALTH ───────────────────────────────────────────
 app.get('/', (req, res) => res.json({ status: 'FinanceOS API online' }));
 
@@ -236,11 +261,9 @@ app.post('/auth/login', loginLimiter, wrap(async (req, res) => {
   const { data: user, error } = await supabase
     .from('users').select('id, name, email, password_hash')
     .eq('email', email.trim().toLowerCase()).maybeSingle();
-  if (error || !user || !user.password_hash)
-    return res.status(401).json({ error: 'E-mail ou senha incorretos' });
-
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid)
+  const hash = !error && user && user.password_hash;
+  const valid = await bcrypt.compare(password, hash || DUMMY_HASH);
+  if (!hash || !valid)
     return res.status(401).json({ error: 'E-mail ou senha incorretos' });
 
   res.json({ token: signToken(user.id), user: { id: user.id, name: user.name, email: user.email } });

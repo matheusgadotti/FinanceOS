@@ -1,0 +1,7 @@
+# Segredos: o .env real nunca deve ir para o GitHub (o .env.example pode).
+.env
+.env.*
+!.env.example
+
+node_modules/
+npm-debug.log*

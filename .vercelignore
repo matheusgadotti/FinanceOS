@@ -1,0 +1,3 @@
+# O site na Vercel só precisa do index.html e do app.js.
+# O backend roda no Render e não deve ser publicado junto com o site.
+backend/

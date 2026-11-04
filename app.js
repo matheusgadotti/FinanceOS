@@ -22,7 +22,7 @@ function setSyncing(on,err=false){
   else if(on){d.className='sync-dot syncing';l.textContent='Sincronizando...';}
   else{d.className='sync-dot';l.textContent='Sincronizado';}
 }
-function fmt(v){return'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmt(v){const n=parseFloat(v||0);return(n<=-0.005?'−':'')+'R$ '+Math.abs(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 // Exibe textos do usuário como texto puro (nunca como HTML).
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 // Argumento seguro para onclick="fn(...)".
@@ -185,9 +185,63 @@ function renderDashboard(){
     <div class="metric"><label>Saldo</label><div class="val ${bal>=0?'pos':'neg'}">${fmt(bal)}</div></div>
     <div class="metric"><label>Investido</label><div class="val neutral">${fmt(inv.net)}</div></div>
     <div class="metric"><label>Rendimentos</label><div class="val ${signClass(inv.yld)}">${signed(inv.yld)}</div></div>`;
+  renderWolf(rec,bal,txs.length);
   renderBarChart('expBars',txs.filter(t=>t.type==='gasto'),true);
   renderBarChart('recBars',txs.filter(t=>t.type==='receita'),false);
   document.getElementById('dashTxTable').innerHTML=buildTxRows(txs.slice(0,5),false);
+}
+
+// ══ LOBINHO DO DASHBOARD ══════════════════════════════
+// Mascote original em SVG, animado com CSS. O humor segue o saldo do período escolhido no topo:
+// feliz = sobrou 10% ou mais do que entrou; tranquilo = sobrou menos de 10%; triste = gastos maiores que as receitas.
+const WOLF_HAPPY_RATE=0.10;
+function renderWolf(rec,bal,count){
+  const el=document.getElementById('dashWolf');if(!el)return;
+  const y=document.getElementById('yearSel').value,m=document.getElementById('monthSel').value;
+  const em=!y||y==='all'?'no total':m==='all'?`em ${y}`:`em ${MESES[parseInt(m)-1].toLowerCase()}/${y}`;
+  const rate=rec>0?bal/rec:0,pct=Math.round(rate*100).toLocaleString('pt-BR');
+  let mood,title,msg;
+  if(!count){mood='normal';title='Seu lobinho está tranquilo';msg=`Ainda não há lançamentos ${em}.`;}
+  else if(bal<0){mood='sad';title='Seu lobinho está triste';msg=`Os gastos passaram as receitas em <strong>${fmt(-bal)}</strong> ${em}. Bora equilibrar?`;}
+  else if(rec>0&&rate>=WOLF_HAPPY_RATE){mood='happy';title='Seu lobinho está feliz!';msg=`Sobrou <strong>${fmt(bal)}</strong> ${em}, ${pct}% do que entrou. Continue assim! 🐾`;}
+  else{mood='normal';title='Seu lobinho está tranquilo';msg=`Sobrou <strong>${fmt(bal)}</strong> ${em} (${pct}% do que entrou). Guardando 10% ou mais ele fica feliz.`;}
+  el.innerHTML=`<div class="wolf-card mood-${mood}">
+    <div class="wolf ${mood}" role="img" aria-label="${esc(title)}">${wolfSVG(mood)}</div>
+    <div class="wolf-text"><div class="wolf-title">${title}</div><div class="wolf-msg">${msg}</div>
+    <div class="wolf-rule">Feliz: sobra 10% ou mais do que entrou · Tranquilo: sobra menos de 10% · Triste: gastos maiores que as receitas</div></div>
+  </div>`;
+}
+function wolfSVG(mood){
+  const dark='#2b2d42',fur='#7d859b',furDark='#646c82',light='#e8ebf2',pink='#f4a6b8';
+  const sad=mood==='sad',happy=mood==='happy';
+  const line=(d,w=3.5)=>`<path d="${d}" fill="none" stroke="${dark}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const eyes=happy?line('M70 86 Q78 76 86 86',4)+line('M114 86 Q122 76 130 86',4)
+    :`<g class="wolf-eyes"><circle cx="78" cy="85" r="${sad?6:6.5}" fill="${dark}"/><circle cx="122" cy="85" r="${sad?6:6.5}" fill="${dark}"/><circle cx="80.5" cy="82.5" r="2.2" fill="#fff"/><circle cx="124.5" cy="82.5" r="2.2" fill="#fff"/></g>`;
+  const brows=sad?line('M67 75 L86 69')+line('M133 75 L114 69'):'';
+  const mouth=happy?`<path d="M87 109 Q100 130 113 109 Z" fill="#7a2e3b"/><ellipse cx="100" cy="120" rx="6.5" ry="4.5" fill="#f47b8f"/>`
+    :sad?line('M89 119 Q100 108 111 119'):line('M89 109 Q94.5 116 100 110 Q105.5 116 111 109');
+  const blush=happy?`<ellipse cx="66" cy="100" rx="7" ry="4" fill="${pink}" opacity=".75"/><ellipse cx="134" cy="100" rx="7" ry="4" fill="${pink}" opacity=".75"/>`:'';
+  const tear=sad?`<path class="wolf-tear" d="M76 93 C76 93 71.5 100.5 71.5 103.5 A4.5 4.5 0 0 0 80.5 103.5 C80.5 100.5 76 93 76 93 Z" fill="#7cc4ff"/>`:'';
+  // Triste: orelhas caídas para os lados e rabo para baixo.
+  const earL=sad?' transform="rotate(-38 76 60)"':'',earR=sad?' transform="rotate(38 124 60)"':'',tail=sad?' transform="rotate(75 134 150)"':'';
+  return`<svg class="wolf-svg" viewBox="0 0 200 200" aria-hidden="true">
+    <ellipse class="wolf-shadow" cx="100" cy="190" rx="46" ry="6" fill="#000" opacity=".28"/>
+    <g class="wolf-body">
+      <g class="wolf-tail"><g${tail}><path d="M134 152 C166 146 180 118 170 96 C162 116 150 132 128 140 Z" fill="${furDark}"/><path d="M170 96 C176 108 174 122 166 130 C168 118 169 106 170 96 Z" fill="${light}"/></g></g>
+      <ellipse cx="100" cy="156" rx="43" ry="33" fill="${fur}"/>
+      <ellipse cx="100" cy="163" rx="25" ry="23" fill="${light}"/>
+      <ellipse cx="80" cy="187" rx="13" ry="7.5" fill="${light}"/><ellipse cx="120" cy="187" rx="13" ry="7.5" fill="${light}"/>
+      <g class="wolf-head">
+        <g${earL}><path d="M56 72 L64 18 L96 52 Z" fill="${furDark}"/><path d="M65 62 L69 33 L86 52 Z" fill="${pink}"/></g>
+        <g${earR}><path d="M144 72 L136 18 L104 52 Z" fill="${furDark}"/><path d="M135 62 L131 33 L114 52 Z" fill="${pink}"/></g>
+        <path d="M100 40 C138 40 156 64 156 90 C156 102 151 110 161 120 C147 120 141 128 128 131 C120 135 110 137 100 137 C90 137 80 135 72 131 C59 128 53 120 39 120 C49 110 44 102 44 90 C44 64 62 40 100 40 Z" fill="${fur}"/>
+        <path d="M100 64 C110 64 116 78 123 91 C137 100 134 125 100 129 C66 125 63 100 77 91 C84 78 90 64 100 64 Z" fill="${light}"/>
+        ${blush}${brows}${eyes}
+        <ellipse cx="100" cy="101" rx="9" ry="6.5" fill="${dark}"/><ellipse cx="97" cy="99" rx="3" ry="1.8" fill="#fff" opacity=".5"/>
+        ${mouth}${tear}
+      </g>
+    </g>
+  </svg>`;
 }
 function renderBarChart(id,txs,isExp){
   const map={};txs.forEach(t=>{map[t.category]=(map[t.category]||0)+parseFloat(t.value);});

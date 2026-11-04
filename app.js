@@ -24,6 +24,10 @@ function setSyncing(on,err=false){
   else{d.className='sync-dot';l.textContent='Sincronizado';}
 }
 function fmt(v){return'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+// Exibe textos do usuário como texto puro (nunca como HTML).
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+// Argumento seguro para onclick="fn(...)".
+function jsArg(v){return esc(JSON.stringify(v??''));}
 function fmtD(d){if(!d)return'';const[y,m,day]=d.split('-');return`${day}/${m}/${y}`;}
 function toast(m,c='var(--accent)'){const t=document.getElementById('toast');t.textContent=m;t.style.background=c;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 function showAlert(id,msg,type='error'){const el=document.getElementById(id);el.textContent=msg;el.className='auth-alert '+type;}
@@ -103,8 +107,8 @@ async function enterApp(){
   await loadAll();
   document.getElementById('authScreen').classList.remove('visible');
   document.getElementById('app').style.display='flex';
-  document.getElementById('topbarUser').innerHTML=`Olá, <strong>${currentUser.name.split(' ')[0]}</strong>`;
-  document.getElementById('monthSel').value=new Date().getMonth().toString();
+  document.getElementById('topbarUser').innerHTML=`Olá, <strong>${esc(currentUser.name.split(' ')[0])}</strong>`;
+  setCurrentPeriod();
   renderAll();
 }
 function logout(){
@@ -135,14 +139,35 @@ async function loadAll(){
   db.subcategories=subcats||[];
 }
 
-function getMonthFilter(){const v=document.getElementById('monthSel').value;return v==='all'?null:parseInt(v);}
-function filterTx(tx){const m=getMonthFilter();if(m===null)return tx;return tx.filter(t=>{if(!t.date)return false;return new Date(t.date+'T12:00:00').getMonth()===m;});}
+// Filtro de período: um campo de ano e outro de mês (valores "AAAA" e "MM").
+// Com "Todos os anos" o mês fica desativado, para não misturar o mesmo mês de anos diferentes.
+function renderYearOptions(){
+  const sel=document.getElementById('yearSel'),cur=sel.value;
+  const years=new Set([String(new Date().getFullYear())]);
+  db.transactions.forEach(t=>{if(t.date&&/^\d{4}-/.test(t.date))years.add(t.date.slice(0,4));});
+  if(cur&&cur!=='all')years.add(cur);
+  sel.innerHTML='<option value="all">Todos os anos</option>'+[...years].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('');
+  sel.value=cur||String(new Date().getFullYear());
+  const ms=document.getElementById('monthSel');
+  ms.disabled=sel.value==='all';
+  if(ms.disabled)ms.value='all';
+}
+function setCurrentPeriod(){
+  const d=new Date(),ys=document.getElementById('yearSel');
+  ys.value='';renderYearOptions();ys.value=String(d.getFullYear());
+  document.getElementById('monthSel').value=String(d.getMonth()+1).padStart(2,'0');
+}
+function filterTx(tx){
+  const y=document.getElementById('yearSel').value,m=document.getElementById('monthSel').value;
+  if(!y||y==='all')return tx;
+  return tx.filter(t=>t.date&&t.date.slice(0,4)===y&&(m==='all'||t.date.slice(5,7)===m));
+}
 function showTab(id,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');renderAll();
 }
-function renderAll(){renderDashboard();renderTxTable();renderInvestments();renderGoals();renderReports();renderSettings();}
+function renderAll(){renderYearOptions();renderDashboard();renderTxTable();renderInvestments();renderGoals();renderReports();renderSettings();}
 
 function renderDashboard(){
   const txs=filterTx(db.transactions);
@@ -166,7 +191,7 @@ function renderBarChart(id,txs,isExp){
   const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]);
   if(!sorted.length){document.getElementById(id).innerHTML='<div class="empty-state">Sem dados</div>';return;}
   const max=sorted[0][1];
-  document.getElementById(id).innerHTML=sorted.map(([cat,val])=>`<div class="bar-item"><div class="bar-label">${cat}</div><div class="bar-track"><div class="bar-fill" style="width:${(val/max*100).toFixed(1)}%;background:${isExp?'var(--red)':'var(--green)'}"></div></div><div class="bar-val">${fmt(val)}</div></div>`).join('');
+  document.getElementById(id).innerHTML=sorted.map(([cat,val])=>`<div class="bar-item"><div class="bar-label">${esc(cat)}</div><div class="bar-track"><div class="bar-fill" style="width:${(val/max*100).toFixed(1)}%;background:${isExp?'var(--red)':'var(--green)'}"></div></div><div class="bar-val">${fmt(val)}</div></div>`).join('');
 }
 function buildTxRows(txs,actions=true){
   if(!txs.length)return'<div class="empty-state">Nenhuma transação encontrada</div>';
@@ -174,15 +199,15 @@ function buildTxRows(txs,actions=true){
     txs.map(t=>{
       const isInst=t.installment_total>1;
       const label=t.desc||t.description||'';
-      const subcat=t.subcategory?`<span style="font-size:.68rem;color:#c4b5fd"> › ${t.subcategory}</span>`:'';
-      const instBadge=isInst?`<span class="badge badge-inst">${t.installment_current}/${t.installment_total}x</span> `:'';
+      const subcat=t.subcategory?`<span style="font-size:.68rem;color:#c4b5fd"> › ${esc(t.subcategory)}</span>`:'';
+      const instBadge=isInst?`<span class="badge badge-inst">${esc(t.installment_current)}/${esc(t.installment_total)}x</span> `:'';
       return`<tr>
-        <td style="color:var(--muted);white-space:nowrap">${fmtD(t.date)}</td>
-        <td>${instBadge}${label}${subcat}${t.obs?`<br><span style="font-size:.7rem;color:var(--muted)">${t.obs}</span>`:''}</td>
-        <td><span class="badge badge-cat">${t.category}</span></td>
-        <td><span class="badge ${t.type==='receita'?'badge-rec':'badge-exp'}">${t.type}</span></td>
+        <td style="color:var(--muted);white-space:nowrap">${esc(fmtD(t.date))}</td>
+        <td>${instBadge}${esc(label)}${subcat}${t.obs?`<br><span style="font-size:.7rem;color:var(--muted)">${esc(t.obs)}</span>`:''}</td>
+        <td><span class="badge badge-cat">${esc(t.category)}</span></td>
+        <td><span class="badge ${t.type==='receita'?'badge-rec':'badge-exp'}">${esc(t.type)}</span></td>
         <td style="font-weight:600;color:${t.type==='receita'?'var(--green)':'var(--red)'};white-space:nowrap">${fmt(t.value)}</td>
-        ${actions?`<td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="editTx('${t.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="askDelTx('${t.id}','${t.installment_group||''}',${t.installment_total||1})">🗑</button></td>`:''}
+        ${actions?`<td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="editTx(${jsArg(t.id)})">✏️</button> <button class="btn btn-danger btn-sm" onclick="askDelTx(${jsArg(t.id)},${jsArg(t.installment_group||'')},${parseInt(t.installment_total)||1})">🗑</button></td>`:''}
       </tr>`;
     }).join('')+'</tbody></table>';
 }
@@ -196,7 +221,7 @@ function renderTxTable(){
   txs=[...txs].sort((a,b)=>fsort==='date_desc'?b.date.localeCompare(a.date):fsort==='date_asc'?a.date.localeCompare(b.date):fsort==='val_desc'?b.value-a.value:a.value-b.value);
   const allCats=[...new Set(db.transactions.map(t=>t.category))].sort();
   const fc=document.getElementById('fCat');
-  if(fc){const cur=fc.value;fc.innerHTML='<option value="all">Todas categorias</option>'+allCats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');}
+  if(fc){const cur=fc.value;fc.innerHTML='<option value="all">Todas categorias</option>'+allCats.map(c=>`<option value="${esc(c)}"${c===cur?' selected':''}>${esc(c)}</option>`).join('');}
   document.getElementById('txTable').innerHTML=buildTxRows(txs,true);
 }
 function openModal(id){document.getElementById('modal-'+id).classList.add('open');}
@@ -204,14 +229,14 @@ function closeModal(id){document.getElementById('modal-'+id).classList.remove('o
 function updateTxCatOptions(){
   const type=document.getElementById('txType').value;
   const cats=type==='receita'?db.catRec:db.catExp;
-  document.getElementById('txCat').innerHTML=cats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  document.getElementById('txCat').innerHTML=cats.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
   updateSubcatOptions();
 }
 function updateSubcatOptions(){
   const catName=document.getElementById('txCat').value;
   const cat=[...db.catExp,...db.catRec].find(c=>c.name===catName);
   const subs=cat?db.subcategories.filter(s=>s.category_id===cat.id):[];
-  document.getElementById('txSubcat').innerHTML='<option value="">— nenhuma —</option>'+subs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  document.getElementById('txSubcat').innerHTML='<option value="">— nenhuma —</option>'+subs.map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
 }
 function toggleInstallment(){
   const on=document.getElementById('txInstallCheck').checked;
@@ -444,13 +469,13 @@ function renderInvestments(){
     const modeLabel=inv.yield_mode==='pct'?`${inv.yield_rate}% a.m.`:inv.yield_mode==='pctAnual'?`${inv.yield_rate}% a.a.`:'Manual';
     return`<div class="inv-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div><div class="inv-name">${inv.name}</div>
+        <div><div class="inv-name">${esc(inv.name)}</div>
         <div style="display:flex;gap:.4rem;margin-top:.3rem;flex-wrap:wrap">
-          <span class="inv-tag">${inv.type}</span>
-          ${inv.institution?`<span class="inv-tag">${inv.institution}</span>`:''}
-          <span class="inv-tag" style="color:var(--accent2);border-color:rgba(78,205,196,.3)">📊 ${modeLabel}</span>
+          <span class="inv-tag">${esc(inv.type)}</span>
+          ${inv.institution?`<span class="inv-tag">${esc(inv.institution)}</span>`:''}
+          <span class="inv-tag" style="color:var(--accent2);border-color:rgba(78,205,196,.3)">📊 ${esc(modeLabel)}</span>
         </div></div>
-        <div style="display:flex;gap:.35rem"><button class="btn btn-ghost btn-sm" onclick="editInv('${inv.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="delInv('${inv.id}')">🗑</button></div>
+        <div style="display:flex;gap:.35rem"><button class="btn btn-ghost btn-sm" onclick="editInv(${jsArg(inv.id)})">✏️</button><button class="btn btn-danger btn-sm" onclick="delInv(${jsArg(inv.id)})">🗑</button></div>
       </div>
       <div class="inv-stats">
         <div class="inv-stat"><label>Investido</label><span>${fmt(inv.value)}</span></div>
@@ -468,18 +493,18 @@ function renderGoals(){
     const pct=Math.min((parseFloat(g.current||0)/parseFloat(g.target))*100,100);
     return`<div class="obj-card">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div class="obj-name">${g.name}</div>
+        <div class="obj-name">${esc(g.name)}</div>
         <div style="display:flex;align-items:center;gap:.5rem">
           <span class="obj-pct">${pct.toFixed(1)}%</span>
-          <button class="btn btn-ghost btn-sm" onclick="editGoal('${g.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="delGoal('${g.id}')">🗑</button>
+          <button class="btn btn-ghost btn-sm" onclick="editGoal(${jsArg(g.id)})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="delGoal(${jsArg(g.id)})">🗑</button>
         </div>
       </div>
       <div class="obj-bar-track"><div class="obj-bar-fill" style="width:${pct}%"></div></div>
       <div class="obj-meta">
         <span>${fmt(g.current||0)} de ${fmt(g.target)}</span>
         <span>Faltam ${fmt(Math.max(0,parseFloat(g.target)-parseFloat(g.current||0)))}</span>
-        ${g.deadline?`<span>Prazo: ${fmtD(g.deadline)}</span>`:''}
+        ${g.deadline?`<span>Prazo: ${esc(fmtD(g.deadline))}</span>`:''}
       </div>
     </div>`;
   }).join('');
@@ -606,17 +631,17 @@ function renderReports(){
   // ── GASTOS POR CATEGORIA ─────────────────────────
   const expMap={};mTx.filter(t=>t.type==='gasto').forEach(t=>{expMap[t.category]=(expMap[t.category]||0)+parseFloat(t.value);});
   const expS=Object.entries(expMap).sort((a,b)=>b[1]-a[1]),expMax=expS[0]?.[1]||1;
-  document.getElementById('rptCatExp').innerHTML=`<h4>Gastos por categoria</h4>`+(expS.length?expS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${c}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/expMax*100).toFixed(1)}%;background:var(--red)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
+  document.getElementById('rptCatExp').innerHTML=`<h4>Gastos por categoria</h4>`+(expS.length?expS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${esc(c)}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/expMax*100).toFixed(1)}%;background:var(--red)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
 
   // ── RECEITAS POR CATEGORIA ────────────────────────
   const recMap={};mTx.filter(t=>t.type==='receita').forEach(t=>{recMap[t.category]=(recMap[t.category]||0)+parseFloat(t.value);});
   const recS=Object.entries(recMap).sort((a,b)=>b[1]-a[1]),recMax=recS[0]?.[1]||1;
-  document.getElementById('rptCatRec').innerHTML=`<h4>Receitas por categoria</h4>`+(recS.length?recS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${c}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/recMax*100).toFixed(1)}%;background:var(--green)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
+  document.getElementById('rptCatRec').innerHTML=`<h4>Receitas por categoria</h4>`+(recS.length?recS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${esc(c)}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/recMax*100).toFixed(1)}%;background:var(--green)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
 
   // ── DISTRIBUIÇÃO INVESTIMENTOS ────────────────────
   const invMap={};db.investments.forEach(i=>{invMap[i.type]=(invMap[i.type]||0)+parseFloat(i.value||0);});
   const invS=Object.entries(invMap).sort((a,b)=>b[1]-a[1]),invMax=invS[0]?.[1]||1;
-  document.getElementById('rptInvRet').innerHTML=`<h4>Distribuição de investimentos</h4>`+(invS.length?invS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${c}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/invMax*100).toFixed(1)}%;background:var(--accent)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
+  document.getElementById('rptInvRet').innerHTML=`<h4>Distribuição de investimentos</h4>`+(invS.length?invS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${esc(c)}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/invMax*100).toFixed(1)}%;background:var(--accent)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
 
   // ── DONUT — GASTOS VS RECEITAS ────────────────────
   (()=>{
@@ -650,13 +675,13 @@ function renderReports(){
 
 function renderSettings(){
   const allCats=[...db.catExp,...db.catRec];
-  const makeList=(cats,isExp)=>!cats.length?'<div class="empty-state">Sem categorias</div>':`<table><tbody>`+cats.map(c=>`<tr><td style="color:#fff">${c.name}</td><td style="text-align:right"><button class="btn btn-danger btn-sm" onclick="delCat('${c.id}','${isExp?'exp':'rec'}')">🗑</button></td></tr>`).join('')+'</tbody></table>';
+  const makeList=(cats,isExp)=>!cats.length?'<div class="empty-state">Sem categorias</div>':`<table><tbody>`+cats.map(c=>`<tr><td style="color:#fff">${esc(c.name)}</td><td style="text-align:right"><button class="btn btn-danger btn-sm" onclick="delCat(${jsArg(c.id)},'${isExp?'exp':'rec'}')">🗑</button></td></tr>`).join('')+'</tbody></table>';
   document.getElementById('catExpList').innerHTML=makeList(db.catExp,true);
   document.getElementById('catRecList').innerHTML=makeList(db.catRec,false);
   const sf=document.getElementById('subcatFilter'),curSF=sf.value;
-  sf.innerHTML='<option value="">Todas as categorias</option>'+allCats.map(c=>`<option value="${c.id}"${c.id===curSF?' selected':''}>${c.name} (${db.catExp.find(x=>x.id===c.id)?'gasto':'receita'})</option>`).join('');
+  sf.innerHTML='<option value="">Todas as categorias</option>'+allCats.map(c=>`<option value="${esc(c.id)}"${c.id===curSF?' selected':''}>${esc(c.name)} (${db.catExp.find(x=>x.id===c.id)?'gasto':'receita'})</option>`).join('');
   renderSubcatList();
-  document.getElementById('newSubcatCat').innerHTML=allCats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('newSubcatCat').innerHTML=allCats.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
 }
 function renderSubcatList(){
   const catId=document.getElementById('subcatFilter').value;
@@ -664,7 +689,7 @@ function renderSubcatList(){
   const allCats=[...db.catExp,...db.catRec];
   if(!subs.length){document.getElementById('subcatList').innerHTML='<div class="empty-state">Nenhuma subcategoria cadastrada</div>';return;}
   document.getElementById('subcatList').innerHTML=`<table><thead><tr><th>Subcategoria</th><th>Categoria</th><th></th></tr></thead><tbody>`+
-    subs.map(s=>{const cat=allCats.find(c=>c.id===s.category_id);return`<tr><td style="color:#fff">${s.name}</td><td><span class="badge badge-cat">${cat?cat.name:'—'}</span></td><td style="text-align:right"><button class="btn btn-danger btn-sm" onclick="delSubcat('${s.id}')">🗑</button></td></tr>`;}).join('')+'</tbody></table>';
+    subs.map(s=>{const cat=allCats.find(c=>c.id===s.category_id);return`<tr><td style="color:#fff">${esc(s.name)}</td><td><span class="badge badge-cat">${cat?esc(cat.name):'—'}</span></td><td style="text-align:right"><button class="btn btn-danger btn-sm" onclick="delSubcat(${jsArg(s.id)})">🗑</button></td></tr>`;}).join('')+'</tbody></table>';
 }
 async function saveCat(type){
   const inputId=type==='exp'?'newCatExpName':'newCatRecName';

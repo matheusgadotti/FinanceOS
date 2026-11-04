@@ -1,9 +1,8 @@
 const API='https://financeos-api-jaiw.onrender.com';
 let authToken=localStorage.getItem('financeOS_token')||'';
 let currentUser=null;
-let db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[],contribs:[],contribsOk:true};
+let db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[],contribs:[],contribsOk:true,invMoves:[],invMovesOk:true};
 let pendingDelId=null,pendingDelGroup=null;
-let currentYieldMode='manual';
 
 async function apiFetch(method,path,body){
   setSyncing(true);
@@ -114,7 +113,7 @@ async function enterApp(){
 function logout(){
   authToken='';currentUser=null;
   localStorage.removeItem('financeOS_token');localStorage.removeItem('financeOS_user');
-  db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[],contribs:[],contribsOk:true};goalUI.panel={};goalUI.newOpen=false;
+  db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[],contribs:[],contribsOk:true,invMoves:[],invMovesOk:true};goalUI.panel={};goalUI.newOpen=false;invUI.panel={};invUI.newOpen=false;
   document.getElementById('app').style.display='none';
   document.getElementById('authScreen').classList.add('visible');
   document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';
@@ -128,13 +127,15 @@ async function tryAutoLogin(){
 }
 
 async function loadAll(){
-  const[txs,invs,goals,cats,subcats,contribs]=await Promise.all([
+  const[txs,invs,goals,cats,subcats,contribs,invMovesRes]=await Promise.all([
     apiFetch('GET','/transactions'),apiFetch('GET','/investments'),
     apiFetch('GET','/goals'),apiFetch('GET','/categories'),apiFetch('GET','/subcategories'),
     apiFetch('GET','/goal-contributions').catch(()=>null), // opcional: a tabela de aportes pode ainda não existir
+    apiFetch('GET','/investment-movements').catch(()=>null), // opcional: idem para aportes/resgates de investimentos
   ]);
   db.contribs=contribs||[];db.contribsOk=Array.isArray(contribs);
-  if(!db.contribsOk)setSyncing(false);
+  db.invMoves=invMovesRes||[];db.invMovesOk=Array.isArray(invMovesRes);
+  if(!db.contribsOk||!db.invMovesOk)setSyncing(false);
   db.transactions=(txs||[]).map(t=>({...t,desc:t.description}));
   db.investments=invs||[];db.goals=goals||[];
   db.catExp=(cats||[]).filter(c=>c.type==='exp');
@@ -177,14 +178,13 @@ function renderDashboard(){
   const rec=txs.filter(t=>t.type==='receita').reduce((s,t)=>s+parseFloat(t.value),0);
   const exp=txs.filter(t=>t.type==='gasto').reduce((s,t)=>s+parseFloat(t.value),0);
   const bal=rec-exp;
-  const invTotal=db.investments.reduce((s,i)=>s+parseFloat(i.value||0),0);
-  const invYield=db.investments.reduce((s,i)=>s+calcInvYield(i),0);
+  const inv=invPortfolio(); // só investimentos ativos
   document.getElementById('dashCards').innerHTML=`
     <div class="metric"><label>Receitas</label><div class="val pos">${fmt(rec)}</div></div>
     <div class="metric"><label>Gastos</label><div class="val neg">${fmt(exp)}</div></div>
     <div class="metric"><label>Saldo</label><div class="val ${bal>=0?'pos':'neg'}">${fmt(bal)}</div></div>
-    <div class="metric"><label>Investido</label><div class="val neutral">${fmt(invTotal)}</div></div>
-    <div class="metric"><label>Rendimentos</label><div class="val pos">${fmt(invYield)}</div></div>`;
+    <div class="metric"><label>Investido</label><div class="val neutral">${fmt(inv.net)}</div></div>
+    <div class="metric"><label>Rendimentos</label><div class="val ${signClass(inv.yld)}">${signed(inv.yld)}</div></div>`;
   renderBarChart('expBars',txs.filter(t=>t.type==='gasto'),true);
   renderBarChart('recBars',txs.filter(t=>t.type==='receita'),false);
   document.getElementById('dashTxTable').innerHTML=buildTxRows(txs.slice(0,5),false);
@@ -357,139 +357,334 @@ async function confirmDelTx(all){
   }catch(e){toast(e.message,'var(--red)');}
 }
 
-function setYieldMode(mode){
-  currentYieldMode=mode;
-  document.getElementById('yieldTabManual').className='yield-mode-tab'+(mode==='manual'?' active':'');
-  document.getElementById('yieldTabPct').className='yield-mode-tab'+(mode==='pct'?' active':'');
-  document.getElementById('yieldTabPctAnual').className='yield-mode-tab'+(mode==='pctAnual'?' active':'');
-  document.getElementById('yieldManualFields').style.display=mode==='manual'?'block':'none';
-  document.getElementById('yieldPctFields').style.display=mode==='pct'?'block':'none';
-  document.getElementById('yieldPctAnualFields').style.display=mode==='pctAnual'?'block':'none';
-  calcInvPreview();
+// ══ INVESTIMENTOS ══════════════════════════════════════
+// Tudo na própria página (sem popups). O campo "value" guarda o total líquido aplicado
+// (aplicação inicial + aportes − resgates); o backend mantém isso a cada movimentação.
+const INV_TYPES=['Renda Fixa','Renda Variável','Fundo Imobiliário','Ações','Cripto','Poupança','Outro'];
+const INV_MODES=[['pctAnual','Taxa ao ano'],['pct','Taxa ao mês'],['manual','Valor atual (manual)']];
+const invUI={panel:{},confirmMove:null,newOpen:false};
+function signClass(v){return v>0.005?'pos':v<-0.005?'neg':'';}
+function fmtPctBR(p,sign=false){return(sign&&p>0.005?'+':p<-0.005?'−':'')+Math.abs(p).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';}
+function rateTxt(v){return(parseFloat(v)||0).toLocaleString('pt-BR',{maximumFractionDigits:4});}
+function invById(id){return db.investments.find(x=>x.id===id);}
+function invMoves(id){return db.invMoves.filter(m=>m.investment_id===id);}
+// Crescimento por dias corridos: (1+taxa)^(dias/365,25) ao ano ou (1+taxa)^(dias/30,44) ao mês.
+function invGrowth(inv,days){
+  const r=(parseFloat(inv.yield_rate)||0)/100;
+  if(days<=0||!r)return 1;
+  return Math.pow(1+r,days/(inv.yield_mode==='pct'?30.4375:365.25));
 }
-function calcInvYield(inv){
-  if(!inv.yield_mode||inv.yield_mode==='manual')return parseFloat(inv.yield||0);
-  const val=parseFloat(inv.value||0);
-  const rate=parseFloat(inv.yield_rate||0);
-  if(!val||!rate||!inv.date)return parseFloat(inv.yield||0);
-  const start=new Date(inv.date+'T12:00:00');
-  const now=new Date();
-  const months=(now.getFullYear()-start.getFullYear())*12+(now.getMonth()-start.getMonth());
-  if(months<=0)return 0;
-  if(inv.yield_mode==='pct')return parseFloat((val*Math.pow(1+rate/100,months)-val).toFixed(2));
-  const monthlyRate=Math.pow(1+rate/100,1/12)-1;
-  return parseFloat((val*Math.pow(1+monthlyRate,months)-val).toFixed(2));
-}
-function calcInvPreview(){
-  const val=parseFloat(document.getElementById('invVal').value)||0;
-  const date=document.getElementById('invDate').value;
-  if(!val||!date){document.getElementById('invCalcPreview').style.display='none';document.getElementById('invCalcPreviewAnual').style.display='none';return;}
-  const start=new Date(date+'T12:00:00');
-  const now=new Date();
-  const months=Math.max(0,(now.getFullYear()-start.getFullYear())*12+(now.getMonth()-start.getMonth()));
-  if(currentYieldMode==='pct'){
-    const rate=parseFloat(document.getElementById('invRateMes').value)||0;
-    if(!rate){document.getElementById('invCalcPreview').style.display='none';return;}
-    const yld=val*Math.pow(1+rate/100,months)-val;
-    const el=document.getElementById('invCalcPreview');
-    el.style.display='block';
-    el.innerHTML=`📊 ${months} meses — Rendimento: <strong>${fmt(yld)}</strong> | Total: <strong>${fmt(val+yld)}</strong>`;
-  }else if(currentYieldMode==='pctAnual'){
-    const rate=parseFloat(document.getElementById('invRateAnual').value)||0;
-    if(!rate){document.getElementById('invCalcPreviewAnual').style.display='none';return;}
-    const monthlyRate=Math.pow(1+rate/100,1/12)-1;
-    const yld=val*Math.pow(1+monthlyRate,months)-val;
-    const el=document.getElementById('invCalcPreviewAnual');
-    el.style.display='block';
-    el.innerHTML=`📊 ${months} meses — Rendimento: <strong>${fmt(yld)}</strong> | Total: <strong>${fmt(val+yld)}</strong>`;
-  }
-}
-function openInvModal(){
-  document.getElementById('invEditId').value='';document.getElementById('invModalTitle').textContent='Novo Investimento';
-  ['invName','invVal','invDate','invYield','invInst','invRateMes','invRateAnual'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('invType').value='Renda Fixa';
-  ['invNameErr','invValErr'].forEach(id=>document.getElementById(id).classList.remove('show'));
-  ['invName','invVal'].forEach(id=>document.getElementById(id).classList.remove('invalid'));
-  document.getElementById('invCalcPreview').style.display='none';document.getElementById('invCalcPreviewAnual').style.display='none';
-  setYieldMode('manual');openModal('addInv');
-}
-function editInv(id){
-  const inv=db.investments.find(x=>x.id===id);if(!inv)return;
-  document.getElementById('invEditId').value=id;document.getElementById('invModalTitle').textContent='Editar Investimento';
-  document.getElementById('invName').value=inv.name;document.getElementById('invType').value=inv.type;
-  document.getElementById('invVal').value=inv.value;document.getElementById('invDate').value=inv.date||'';
-  document.getElementById('invInst').value=inv.institution||'';
+function daysBetween(fromISO,to){return Math.max(0,Math.floor((to-parseISO(fromISO))/DAY_MS));}
+
+// Números de um investimento. Cada aporte rende a partir da própria data; resgates entram como valor negativo.
+function invCalc(inv,moves=invMoves(inv.id),at=null){
+  const now=at?parseISO(at):(()=>{const d=new Date();d.setHours(12,0,0,0);return d;})();
+  const net=r2(parseFloat(inv.value)||0);
+  const sumMoves=r2(moves.reduce((s,m)=>s+parseFloat(m.amount),0));
+  const initial=r2(net-sumMoves);
+  const totalIn=r2(initial+moves.filter(m=>parseFloat(m.amount)>0).reduce((s,m)=>s+parseFloat(m.amount),0));
   const mode=inv.yield_mode||'manual';
-  setYieldMode(mode);
-  if(mode==='manual')document.getElementById('invYield').value=inv.yield||0;
-  else if(mode==='pct')document.getElementById('invRateMes').value=inv.yield_rate||'';
-  else document.getElementById('invRateAnual').value=inv.yield_rate||'';
-  calcInvPreview();openModal('addInv');
+  let balance,needsDate=false;
+  if(mode==='manual'){balance=r2(net+(parseFloat(inv.yield)||0));}
+  else{
+    needsDate=!inv.date;
+    const upTo=moves.filter(m=>!at||String(m.date).slice(0,10)<=at);
+    balance=r2((inv.date?initial*invGrowth(inv,daysBetween(inv.date,now)):initial)+
+      upTo.reduce((s,m)=>s+parseFloat(m.amount)*invGrowth(inv,daysBetween(m.date,now)),0));
+    if(at)return{balance};
+  }
+  const yld=r2(balance-net),closed=moves.length>0&&Math.abs(balance)<0.05;
+  // Encerrado: percentual sobre tudo que foi aplicado. Ativo: sobre o que ainda está aplicado.
+  const base=closed||net<=0.005?totalIn:net,pct=base>0?yld/base*100:0;
+  const closedAt=closed?moves.filter(m=>parseFloat(m.amount)<0).map(m=>String(m.date).slice(0,10)).sort().pop():null;
+  return{net,initial,totalIn,balance:closed?0:balance,yld,pct,closed,closedAt,needsDate,mode};
 }
-async function saveInv(){
-  const name=document.getElementById('invName').value.trim();
-  const type=document.getElementById('invType').value;
-  const value=parseFloat(document.getElementById('invVal').value)||0;
-  const date=document.getElementById('invDate').value||null;
-  const institution=document.getElementById('invInst').value.trim();
-  let valid=true;
-  if(!name){markInvalid('invName','invNameErr');valid=false;}else{clearInvalid('invName','invNameErr');}
-  if(!value){markInvalid('invVal','invValErr');valid=false;}else{clearInvalid('invVal','invValErr');}
-  if(!valid)return;
-  let yield_val=0,yield_mode=currentYieldMode,yield_rate=null;
-  if(yield_mode==='manual')yield_val=parseFloat(document.getElementById('invYield').value)||0;
-  else if(yield_mode==='pct')yield_rate=parseFloat(document.getElementById('invRateMes').value)||0;
-  else yield_rate=parseFloat(document.getElementById('invRateAnual').value)||0;
-  const payload={name,type,value,date,yield:yield_val,yield_mode,yield_rate,institution};
-  const eid=document.getElementById('invEditId').value;
-  try{
-    if(eid){
-      await apiFetch('PATCH',`/investments/${eid}`,payload);
-      const i=db.investments.findIndex(x=>x.id===eid);if(i>-1)db.investments[i]={...db.investments[i],...payload};
-    }else{
-      const r=await apiFetch('POST','/investments',payload);if(r&&r[0])db.investments.unshift(r[0]);
-    }
-    closeModal('addInv');renderAll();toast('Investimento salvo!');
-  }catch(e){toast(e.message,'var(--red)');}
+// Totais da carteira (só investimentos ativos) — usados também no Dashboard e nos Relatórios.
+function invPortfolio(){
+  const all=db.investments.map(inv=>({inv,c:invCalc(inv)}));
+  const active=all.filter(x=>!x.c.closed),closed=all.filter(x=>x.c.closed);
+  const sum=(arr,k)=>r2(arr.reduce((s,x)=>s+x.c[k],0));
+  const net=sum(active,'net'),balance=sum(active,'balance'),yld=sum(active,'yld');
+  return{all,active,closed,net,balance,yld,pct:net>0?yld/net*100:0,realized:sum(closed,'yld')};
 }
-async function delInv(id){
-  if(!confirm('Remover este investimento?'))return;
-  try{await apiFetch('DELETE',`/investments/${id}`);db.investments=db.investments.filter(i=>i.id!==id);renderAll();toast('Removido','var(--amber)');}catch(e){toast(e.message,'var(--red)');}
-}
+
 function renderInvestments(){
-  const total=db.investments.reduce((s,i)=>s+parseFloat(i.value||0),0);
-  const yields=db.investments.reduce((s,i)=>s+calcInvYield(i),0);
-  const pct=total>0?((yields/total)*100).toFixed(2):0;
-  document.getElementById('invSummary').innerHTML=`
-    <div class="metric"><label>Total investido</label><div class="val neutral">${fmt(total)}</div></div>
-    <div class="metric"><label>Rendimentos totais</label><div class="val pos">${fmt(yields)}</div></div>
-    <div class="metric"><label>Patrimônio total</label><div class="val pos">${fmt(total+yields)}</div></div>
-    <div class="metric"><label>Rentabilidade</label><div class="val pos">${pct}%</div></div>`;
-  if(!db.investments.length){document.getElementById('invList').innerHTML='<div class="empty-state">Nenhum investimento cadastrado</div>';return;}
-  document.getElementById('invList').innerHTML=db.investments.map(inv=>{
-    const yld=calcInvYield(inv);
-    const p=parseFloat(inv.value)>0?((yld/parseFloat(inv.value))*100).toFixed(2):0;
-    const modeLabel=inv.yield_mode==='pct'?`${inv.yield_rate}% a.m.`:inv.yield_mode==='pctAnual'?`${inv.yield_rate}% a.a.`:'Manual';
-    return`<div class="inv-card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div><div class="inv-name">${esc(inv.name)}</div>
-        <div style="display:flex;gap:.4rem;margin-top:.3rem;flex-wrap:wrap">
-          <span class="inv-tag">${esc(inv.type)}</span>
-          ${inv.institution?`<span class="inv-tag">${esc(inv.institution)}</span>`:''}
-          <span class="inv-tag" style="color:var(--accent2);border-color:rgba(78,205,196,.3)">📊 ${esc(modeLabel)}</span>
-        </div></div>
-        <div style="display:flex;gap:.35rem"><button class="btn btn-ghost btn-sm" onclick="editInv(${jsArg(inv.id)})">✏️</button><button class="btn btn-danger btn-sm" onclick="delInv(${jsArg(inv.id)})">🗑</button></div>
-      </div>
-      <div class="inv-stats">
-        <div class="inv-stat"><label>Investido</label><span>${fmt(inv.value)}</span></div>
-        <div class="inv-stat"><label>Rendimento</label><span style="color:${yld>=0?'var(--green)':'var(--red)'}">${fmt(yld)}</span></div>
-        <div class="inv-stat"><label>Total</label><span>${fmt(parseFloat(inv.value)+yld)}</span></div>
-        <div class="inv-stat"><label>Rentab.</label><span style="color:${yld>=0?'var(--green)':'var(--red)'}">${p}%</span></div>
-      </div>
-      ${inv.date?`<div style="font-size:.7rem;color:var(--muted);margin-top:.6rem">Desde ${fmtD(inv.date)}</div>`:''}
+  const p=invPortfolio();
+  document.getElementById('invSummary').innerHTML=!p.all.length?'':`
+    <div class="metric"><label>Total aplicado</label><div class="val neutral">${fmt(p.net)}</div></div>
+    <div class="metric"><label>Patrimônio atual</label><div class="val">${fmt(p.balance)}</div></div>
+    <div class="metric"><label>Rendimento</label><div class="val ${signClass(p.yld)}">${p.yld>0.005?'▲ ':p.yld<-0.005?'▼ ':''}${signed(p.yld)}</div></div>
+    <div class="metric"><label>Rentabilidade</label><div class="val ${signClass(p.yld)}">${fmtPctBR(p.pct,true)}</div></div>
+    ${p.closed.length?`<div class="metric"><label>Resultado dos encerrados</label><div class="val ${signClass(p.realized)}">${signed(p.realized)}</div></div>`:''}`;
+  document.getElementById('invNotice').innerHTML=db.invMovesOk?'':'<div class="goal-notice">Aportes e resgates ainda não estão ativos no banco de dados. Por enquanto, para colocar mais dinheiro, altere o valor aplicado em ✏️ Editar.</div>';
+  document.getElementById('invNew').classList.toggle('open',invUI.newOpen);
+  const el=document.getElementById('invList');
+  if(!p.all.length){
+    el.innerHTML=invUI.newOpen?'':'<div class="empty-state">Nenhum investimento cadastrado.<br><button class="btn btn-primary btn-sm" style="margin-top:.85rem" onclick="toggleNewInv(true)">+ Adicionar o primeiro</button></div>';
+    return;
+  }
+  // Agrupa por tipo, do maior para o menor patrimônio.
+  const groups={};p.active.forEach(x=>{(groups[x.inv.type||'Outro']=groups[x.inv.type||'Outro']||[]).push(x);});
+  const gl=Object.entries(groups).map(([type,items])=>({type,items:items.sort((a,b)=>b.c.balance-a.c.balance),total:r2(items.reduce((s,x)=>s+x.c.balance,0))})).sort((a,b)=>b.total-a.total);
+  let html=gl.map(g=>{
+    const share=p.balance>0?Math.max(0,g.total/p.balance*100):0;
+    return`<div class="inv-group">
+      <div class="inv-group-head"><span class="inv-group-name">${esc(g.type)}</span><span class="inv-group-meta">${fmt(g.total)} · ${share.toLocaleString('pt-BR',{maximumFractionDigits:1})}% da carteira</span></div>
+      <div class="inv-share"><div style="width:${share.toFixed(1)}%"></div></div>
+      <div class="goal-grid">${g.items.map(invCard).join('')}</div>
     </div>`;
   }).join('');
+  if(!p.active.length)html='<div class="empty-state">Todos os investimentos foram resgatados.</div>';
+  if(p.closed.length)html+=`<div class="goal-section-title">Encerrados (${p.closed.length})</div><div class="goal-grid">${p.closed.map(invCard).join('')}</div>`;
+  el.innerHTML=html;
 }
+
+function invCard({inv,c}){
+  const id=jsArg(inv.id),k=gk(inv.id),panel=invUI.panel[inv.id],moves=invMoves(inv.id);
+  let modeTag;
+  if(c.mode==='pctAnual')modeTag=`<span class="inv-tag rate">${rateTxt(inv.yield_rate)}% a.a.</span>`;
+  else if(c.mode==='pct')modeTag=`<span class="inv-tag rate">${rateTxt(inv.yield_rate)}% a.m.</span>`;
+  else if(c.closed)modeTag='';
+  else if(inv.value_updated_at){
+    const d=daysBetween(inv.value_updated_at,new Date());
+    modeTag=`<span class="inv-tag${d>30&&!c.closed?' warn':''}" title="Valor atual informado manualmente">Atualizado ${d===0?'hoje':d===1?'ontem':`há ${d} dias`}</span>`;
+  }else modeTag='<span class="inv-tag">Valor manual</span>';
+  const since=inv.date?`Desde ${esc(fmtD(inv.date))}`:'';
+  const sub=c.closed?`Encerrado em ${esc(fmtD(c.closedAt))} · resultado <strong>${signed(c.yld)}</strong> (${fmtPctBR(c.pct,true)})`:since;
+  const warn=c.needsDate&&!c.closed?`<div class="inv-warn">⚠ Informe a data da aplicação para calcular o rendimento. <button class="link-btn" onclick="invPanel(${id},'edit')">Editar</button></div>`:'';
+  const ok=db.invMovesOk;
+  return`<div class="goal-card inv-card2${c.closed?' is-closed':''}">
+    <div class="goal-head"><div class="goal-name">${esc(inv.name)}</div>${c.closed?'<span class="goal-status idle">Encerrado</span>':''}</div>
+    <div class="inv-tags">${inv.institution?`<span class="inv-tag">${esc(inv.institution)}</span>`:''}${modeTag}</div>
+    ${c.closed?'':`<div class="inv-stats">
+      <div class="inv-stat"><label>Aplicado</label><span>${fmt(c.net)}</span></div>
+      <div class="inv-stat"><label>Valor atual</label><span>${fmt(c.balance)}</span></div>
+      <div class="inv-stat"><label>Rendimento</label><span class="${signClass(c.yld)}">${c.yld>0.005?'▲ ':c.yld<-0.005?'▼ ':''}${signed(c.yld)}</span></div>
+      <div class="inv-stat"><label>Rentab.</label><span class="${signClass(c.yld)}">${fmtPctBR(c.pct,true)}</span></div>
+    </div>`}
+    ${sub?`<div class="inv-sub">${sub}</div>`:''}${warn}
+    <div class="goal-btns">
+      ${ok?`<button class="btn btn-primary btn-sm${panel==='in'?' active':''}" onclick="invPanel(${id},'in')">+ Aportar</button>`:''}
+      ${ok&&!c.closed?`<button class="btn btn-ghost btn-sm${panel==='out'?' active':''}" onclick="invPanel(${id},'out')"${c.balance>0?'':' disabled'}>− Resgatar</button>`:''}
+      ${c.mode==='manual'&&!c.closed?`<button class="btn btn-ghost btn-sm${panel==='update'?' active':''}" onclick="invPanel(${id},'update')">Atualizar valor</button>`:''}
+      ${ok?`<button class="btn btn-ghost btn-sm${panel==='history'?' active':''}" onclick="invPanel(${id},'history')">Histórico (${moves.length+1})</button>`:''}
+      <span class="goal-btns-right"><button class="btn btn-ghost btn-sm${panel==='edit'?' active':''}" onclick="invPanel(${id},'edit')" title="Editar" aria-label="Editar investimento">✏️</button><button class="btn btn-danger btn-sm${panel==='delete'?' active':''}" onclick="invPanel(${id},'delete')" title="Excluir" aria-label="Excluir investimento">🗑</button></span>
+    </div>
+    ${panel?`<div class="goal-panel">${invPanelHTML(inv,c,panel,id,k,moves)}</div>`:''}
+  </div>`;
+}
+
+function invPanelHTML(inv,c,panel,id,k,moves){
+  const key=e=>`onkeydown="invKey(event,${id},()=>${e})"`;
+  if(panel==='in'||panel==='out'){
+    const isIn=panel==='in',sign=isIn?1:-1;
+    const chips=isIn?[100,500,1000].map(v=>`<button type="button" class="chip" onclick="setInvAmount(${jsArg(k)},${v},false)">+ ${fmt(v)}</button>`).join('')
+      :`<button type="button" class="chip" onclick="setInvAmount(${jsArg(k)},${c.balance},true)">Tudo (${fmt(c.balance)})</button>`;
+    return`<div class="goal-panel-title">${isIn?'Aportar (colocar mais dinheiro)':'Resgatar (tirar dinheiro)'}</div>
+      <div class="goal-chips">${chips}</div>
+      <div class="form-row">
+        <div class="mfg"><label>Valor (R$)</label><input type="number" id="imAmount-${k}" step="0.01" min="0.01" inputmode="decimal" placeholder="0,00" oninput="this.dataset.all=''" ${key(`invMove(${id},${sign})`)}></div>
+        <div class="mfg"><label>Data</label><input type="date" id="imDate-${k}" value="${todayISO()}" ${key(`invMove(${id},${sign})`)}></div>
+      </div>
+      <div class="mfg"><label>Observação <span class="info-tag">opcional</span></label><input type="text" id="imNote-${k}" maxlength="200" placeholder="${isIn?'Ex: aporte mensal':'Ex: resgate para a viagem'}" ${key(`invMove(${id},${sign})`)}></div>
+      ${!isIn?'<div class="goal-hint">Resgatando o valor total, o investimento é encerrado e vai para “Encerrados”, com o resultado final.</div>':''}
+      <div class="goal-err" id="imErr-${k}"></div>
+      <div class="goal-actions"><button class="btn btn-ghost btn-sm" onclick="invPanel(${id},null)">Cancelar</button><button class="btn ${isIn?'btn-primary':'btn-ghost'} btn-sm" id="imBtn-${k}" onclick="invMove(${id},${sign})">${isIn?'Aportar':'Resgatar'}</button></div>`;
+  }
+  if(panel==='update'){
+    return`<div class="goal-panel-title">Atualizar valor atual</div>
+      <div class="goal-hint">Informe quanto o investimento vale hoje (o valor que aparece no app do banco ou da corretora).</div>
+      <div class="mfg"><label>Valor atual (R$)</label><input type="number" id="iuValue-${k}" step="0.01" min="0" inputmode="decimal" value="${c.balance.toFixed(2)}" oninput="invUpdatePreview(${id})" ${key(`invSaveValue(${id})`)}></div>
+      <div class="goal-hint" id="iuPrev-${k}"></div>
+      <div class="goal-err" id="iuErr-${k}"></div>
+      <div class="goal-actions"><button class="btn btn-ghost btn-sm" onclick="invPanel(${id},null)">Cancelar</button><button class="btn btn-primary btn-sm" onclick="invSaveValue(${id})">Salvar</button></div>`;
+  }
+  if(panel==='history'){
+    const rows=moves.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.created_at).localeCompare(String(a.created_at))).map(m=>{
+      const a=parseFloat(m.amount),mid=jsArg(m.id);
+      if(invUI.confirmMove===m.id)return`<div class="hist-row confirm"><span>Excluir ${a>=0?'este aporte':'este resgate'} de ${fmt(Math.abs(a))}?</span><span><button class="btn btn-ghost btn-sm" onclick="confirmInvMove(null)">Não</button> <button class="btn btn-danger btn-sm" onclick="delInvMove(${mid},${id})">Excluir</button></span></div>`;
+      return`<div class="hist-row"><span class="hist-date">${esc(fmtD(String(m.date).slice(0,10)))}</span><span class="hist-amt">${a>=0?'▲ Aporte':'▼ Resgate'} ${fmt(Math.abs(a))}</span><span class="hist-note">${esc(m.note||'')}</span><button class="hist-del" onclick="confirmInvMove(${mid})" title="Excluir" aria-label="Excluir movimentação">✕</button></div>`;
+    }).join('');
+    const first=`<div class="hist-row"><span class="hist-date">${inv.date?esc(fmtD(inv.date)):'—'}</span><span class="hist-amt">● Aplicação inicial ${fmt(c.initial)}</span><span class="hist-note"></span><span></span></div>`;
+    return`<div class="goal-panel-title">Movimentações</div><div class="goal-hist">${rows}${first}</div>`;
+  }
+  if(panel==='edit')return invFormHTML('ie'+k,inv,c,id);
+  if(panel==='delete'){
+    return`<div class="goal-panel-title">Excluir “${esc(inv.name)}”?</div>
+      <div class="goal-hint">O investimento e todas as movimentações serão apagados. ${c.closed?'':'Se você só tirou o dinheiro, prefira “− Resgatar”: assim o resultado fica guardado. '}Essa ação não pode ser desfeita.</div>
+      <div class="goal-actions"><button class="btn btn-ghost btn-sm" onclick="invPanel(${id},null)">Cancelar</button><button class="btn btn-sm btn-danger-solid" onclick="deleteInv(${id})">Excluir investimento</button></div>`;
+  }
+  return'';
+}
+
+// Formulário de criar/editar (o mesmo nos dois casos). p = prefixo dos ids.
+function invFormHTML(p,inv,c,id){
+  const edit=!!inv,mode=inv?(inv.yield_mode||'manual'):'pctAnual',hasMoves=edit&&invMoves(inv.id).length>0;
+  const types=INV_TYPES.concat(inv&&inv.type&&!INV_TYPES.includes(inv.type)?[inv.type]:[]);
+  const v=(x)=>x==null?'':esc(x);
+  const submit=edit?`saveInvForm(${jsArg(p)},${id})`:`saveInvForm(${jsArg(p)},null)`;
+  const enter=`onkeydown="if(event.key==='Enter'){event.preventDefault();${submit.replace(/"/g,'&quot;')}}${edit?'':`if(event.key==='Escape')toggleNewInv(false)`}"`;
+  return`<div class="inv-form" id="${p}Form" data-mode="${mode}">
+    <div class="goal-panel-title">${edit?'Editar investimento':'Novo investimento'}</div>
+    <div class="mfg"><label>Nome</label><input type="text" id="${p}Name" maxlength="150" placeholder="Ex: Tesouro Selic 2029, CDB Banco X, PETR4..." value="${v(inv&&inv.name)}" ${enter}></div>
+    <div class="form-row">
+      <div class="mfg"><label>Tipo</label><select id="${p}Type">${types.map(t=>`<option${(inv?inv.type:'Renda Fixa')===t?' selected':''}>${esc(t)}</option>`).join('')}</select></div>
+      <div class="mfg"><label>Instituição <span class="info-tag">opcional</span></label><input type="text" id="${p}Inst" maxlength="150" placeholder="Ex: Nubank, XP..." value="${v(inv&&inv.institution)}" ${enter}></div>
+    </div>
+    <div class="form-row">
+      <div class="mfg"><label>${hasMoves?'Aplicação inicial (R$)':'Valor aplicado (R$)'}</label><input type="number" id="${p}Value" step="0.01" min="0.01" inputmode="decimal" placeholder="0,00" value="${edit?c.initial.toFixed(2):''}" oninput="invFormPreview(${jsArg(p)})" ${enter}></div>
+      <div class="mfg"><label>Data da aplicação</label><input type="date" id="${p}Date" value="${edit?v(inv.date):todayISO()}" oninput="invFormPreview(${jsArg(p)})" ${enter}></div>
+    </div>
+    ${hasMoves?'<div class="goal-hint" style="margin-top:-.35rem">Aportes e resgates ficam no histórico e não precisam ser somados aqui.</div>':''}
+    <div class="mfg"><label>Como acompanhar o rendimento</label>
+      <div class="yield-mode-tabs">${INV_MODES.map(([m,l])=>`<button type="button" class="yield-mode-tab${m===mode?' active':''}" data-m="${m}" onclick="invSetMode(${jsArg(p)},'${m}')">${l}</button>`).join('')}</div>
+    </div>
+    <div class="mfg" id="${p}RateBox"${mode==='manual'?' style="display:none"':''}><label id="${p}RateLabel">${mode==='pct'?'Taxa (% ao mês)':'Taxa (% ao ano)'}</label><input type="number" id="${p}Rate" step="0.0001" min="0" inputmode="decimal" placeholder="${mode==='pct'?'Ex: 0,9':'Ex: 11,25'}" value="${edit&&mode!=='manual'?v(inv.yield_rate):''}" oninput="invFormPreview(${jsArg(p)})" ${enter}></div>
+    <div class="mfg" id="${p}CurBox"${mode==='manual'?'':' style="display:none"'}><label>Valor atual hoje (R$) <span class="info-tag">opcional</span></label><input type="number" id="${p}Cur" step="0.01" min="0" inputmode="decimal" placeholder="Igual ao aplicado" value="${edit&&mode==='manual'?c.balance.toFixed(2):''}" data-orig="${edit&&mode==='manual'?c.balance.toFixed(2):''}" oninput="invFormPreview(${jsArg(p)})" ${enter}></div>
+    <div class="calc-preview" id="${p}Prev" style="display:none"></div>
+    <div class="goal-err" id="${p}Err"></div>
+    <div class="goal-actions"><button class="btn btn-ghost btn-sm" onclick="${edit?`invPanel(${id},null)`:'toggleNewInv(false)'}">Cancelar</button><button class="btn btn-primary btn-sm" id="${p}Btn" onclick="${submit}">${edit?'Salvar':'Adicionar investimento'}</button></div>
+  </div>`;
+}
+function invSetMode(p,mode){
+  const f=document.getElementById(p+'Form');f.dataset.mode=mode;
+  f.querySelectorAll('.yield-mode-tab').forEach(b=>b.classList.toggle('active',b.dataset.m===mode));
+  document.getElementById(p+'RateBox').style.display=mode==='manual'?'none':'';
+  document.getElementById(p+'CurBox').style.display=mode==='manual'?'':'none';
+  document.getElementById(p+'RateLabel').textContent=mode==='pct'?'Taxa (% ao mês)':'Taxa (% ao ano)';
+  document.getElementById(p+'Rate').placeholder=mode==='pct'?'Ex: 0,9':'Ex: 11,25';
+  invFormPreview(p);
+}
+// Lê o formulário e devolve o objeto do investimento (ou um erro).
+function readInvForm(p,orig){
+  const g=s=>document.getElementById(p+s);
+  const mode=g('Form').dataset.mode,name=g('Name').value.trim(),initial=r2(parseFloat(g('Value').value)),date=g('Date').value||null;
+  const rate=parseFloat(g('Rate').value),curRaw=g('Cur').value;
+  const moves=orig?invMoves(orig.id):[],sumMoves=r2(moves.reduce((s,m)=>s+parseFloat(m.amount),0));
+  const value=r2((initial||0)+sumMoves);
+  const out={name,type:g('Type').value,institution:g('Inst').value.trim(),value,date,yield_mode:mode,
+    yield_rate:mode==='manual'?null:(isNaN(rate)?null:rate),yield:mode==='manual'?(orig&&orig.yield_mode==='manual'?parseFloat(orig.yield)||0:0):0};
+  if(mode==='manual'&&curRaw!==''){
+    const cur=r2(parseFloat(curRaw));
+    if(!(cur>=0))return{error:'O valor atual não pode ser negativo',field:'Cur'};
+    out.yield=r2(cur-value);
+    if(curRaw!==g('Cur').dataset.orig)out.value_updated_at=todayISO();
+  }else if(mode==='manual'&&!orig)out.value_updated_at=todayISO();
+  if(!name)return{error:'Dê um nome ao investimento',field:'Name'};
+  if(!(initial>0))return{error:'Informe o valor aplicado',field:'Value'};
+  if(mode!=='manual'){
+    if(!date)return{error:'Informe a data da aplicação — ela é usada para calcular o rendimento',field:'Date'};
+    if(!(rate>0))return{error:'Informe a taxa de rendimento',field:'Rate'};
+  }
+  return{data:out,moves};
+}
+function invFormPreview(p){
+  const prev=document.getElementById(p+'Prev');if(!prev)return;
+  const f=document.getElementById(p+'Form'),editId=f.closest('.goal-card')?invUI.editing:null;
+  const orig=editId!=null?invById(editId):null,r=readInvForm(p,orig);
+  if(r.error){prev.style.display='none';return;}
+  const c=invCalc({...r.data,id:orig?orig.id:'__novo__'},r.moves);
+  if(r.data.yield_mode!=='manual'){
+    const days=daysBetween(r.data.date,new Date());
+    prev.innerHTML=`📊 Hoje: <strong>${fmt(c.balance)}</strong> · rendimento ${signed(c.yld)} em ${days} dia${days===1?'':'s'}`;
+  }else prev.innerHTML=`📊 Rendimento: <strong>${signed(c.yld)}</strong> (${fmtPctBR(c.pct,true)})`;
+  prev.style.display='block';
+}
+async function saveInvForm(p,id){
+  const orig=id!=null?invById(id):null,r=readInvForm(p,orig),err=document.getElementById(p+'Err');
+  document.querySelectorAll(`#${p}Form input`).forEach(i=>i.classList.remove('invalid'));
+  if(r.error){err.textContent=r.error;const f=document.getElementById(p+r.field);if(f){f.classList.add('invalid');f.focus();}return;}
+  const btn=document.getElementById(p+'Btn');btn.disabled=true;err.textContent='';
+  try{
+    if(orig){
+      const res=await apiFetch('PATCH',`/investments/${id}`,r.data);
+      const i=db.investments.findIndex(x=>x.id===id);if(i>-1)db.investments[i]={...db.investments[i],...(res&&res[0]?res[0]:r.data)};
+      invUI.panel[id]=null;invUI.editing=null;renderAll();toast('Investimento atualizado!');
+    }else{
+      const res=await apiFetch('POST','/investments',r.data);if(res&&res[0])db.investments.unshift(res[0]);
+      invUI.newOpen=false;document.getElementById('invNew').innerHTML='';renderAll();toast('Investimento adicionado!');
+    }
+  }catch(e){err.textContent=e.message;btn.disabled=false;}
+}
+
+// ── Ações ──
+function toggleNewInv(open){
+  invUI.newOpen=open??!invUI.newOpen;
+  const box=document.getElementById('invNew');
+  box.innerHTML=invUI.newOpen?invFormHTML('in',null,null,null):'';
+  renderInvestments();
+  if(invUI.newOpen){document.getElementById('inName').focus();box.scrollIntoView({block:'nearest'});}
+}
+function invPanel(id,type){
+  invUI.panel[id]=type&&invUI.panel[id]!==type?type:null;invUI.confirmMove=null;
+  invUI.editing=invUI.panel[id]==='edit'?id:null;
+  renderInvestments();
+  const k=gk(id),t=invUI.panel[id];
+  const focus={in:'imAmount-'+k,out:'imAmount-'+k,update:'iuValue-'+k,edit:'ie'+k+'Name'}[t];
+  if(focus){const el=document.getElementById(focus);if(el){el.focus();if(el.select)el.select();}}
+  if(t==='update')invUpdatePreview(id);
+  if(t==='edit')invFormPreview('ie'+k);
+}
+function invKey(e,id,action){if(e.key==='Enter'){e.preventDefault();action();}else if(e.key==='Escape')invPanel(id,null);}
+function setInvAmount(k,v,all){const el=document.getElementById('imAmount-'+k);if(el){el.value=r2(v).toFixed(2);el.dataset.all=all?'1':'';el.classList.remove('invalid');el.focus();}}
+function confirmInvMove(mid){invUI.confirmMove=mid;renderInvestments();}
+function invUpdatePreview(id){
+  const inv=invById(id),k=gk(id),c=invCalc(inv),el=document.getElementById('iuPrev-'+k);if(!el)return;
+  const v=parseFloat(document.getElementById('iuValue-'+k).value);
+  if(isNaN(v)){el.innerHTML='';return;}
+  const y=r2(v-c.net),base=c.net>0?c.net:c.totalIn;
+  el.innerHTML=`Rendimento: <strong>${signed(y)}</strong> (${fmtPctBR(base>0?y/base*100:0,true)}) sobre ${fmt(c.net)} aplicados`;
+}
+async function invSaveValue(id){
+  const inv=invById(id),k=gk(id),c=invCalc(inv),inp=document.getElementById('iuValue-'+k),err=document.getElementById('iuErr-'+k);
+  const v=r2(parseFloat(inp.value));
+  if(!(v>=0)){err.textContent='Informe o valor atual';inp.classList.add('invalid');inp.focus();return;}
+  const body={yield:r2(v-c.net),value_updated_at:todayISO()};
+  try{
+    const res=await apiFetch('PATCH',`/investments/${id}`,body);
+    const i=db.investments.findIndex(x=>x.id===id);if(i>-1)db.investments[i]={...db.investments[i],...(res&&res[0]?res[0]:body)};
+    invUI.panel[id]=null;renderAll();toast('Valor atualizado!');
+  }catch(e){err.textContent=e.message;}
+}
+async function invMove(id,sign){
+  const inv=invById(id);if(!inv)return;
+  const k=gk(id),amtEl=document.getElementById('imAmount-'+k),err=document.getElementById('imErr-'+k),btn=document.getElementById('imBtn-'+k);
+  const date=document.getElementById('imDate-'+k).value||todayISO();
+  let amount=r2(parseFloat(amtEl.value));
+  if(sign<0){
+    // "Tudo": recalcula o saldo na data escolhida, para o investimento zerar certinho.
+    const bal=inv.yield_mode==='manual'?invCalc(inv).balance:invCalc(inv,invMoves(id),date).balance;
+    if(amtEl.dataset.all==='1')amount=r2(bal);
+    if(amount>bal+0.01){err.textContent=`O valor disponível ${inv.yield_mode==='manual'?'':'nessa data '}é ${fmt(bal)}`;amtEl.classList.add('invalid');amtEl.focus();return;}
+  }
+  if(!(amount>0)){err.textContent='Informe um valor maior que zero';amtEl.classList.add('invalid');amtEl.focus();return;}
+  const note=document.getElementById('imNote-'+k).value.trim()||null;
+  btn.disabled=true;err.textContent='';
+  try{
+    const r=await apiFetch('POST','/investment-movements',{investment_id:id,amount:sign*amount,date,note});
+    if(!r)return;
+    db.invMoves.unshift(r.movement);
+    const i=db.investments.findIndex(x=>x.id===id);if(i>-1&&r.investment)db.investments[i]={...db.investments[i],...r.investment};
+    invUI.panel[id]=null;renderAll();
+    toast(sign>0?`Aporte de ${fmt(amount)} registrado!`:invCalc(db.investments[i]).closed?'Investimento resgatado e encerrado':`Resgate de ${fmt(amount)} registrado`);
+  }catch(e){err.textContent=e.message;btn.disabled=false;}
+}
+async function delInvMove(mid,id){
+  try{
+    const r=await apiFetch('DELETE',`/investment-movements/${mid}`);if(!r)return;
+    db.invMoves=db.invMoves.filter(m=>m.id!==mid);
+    const i=db.investments.findIndex(x=>x.id===id);if(i>-1&&r.investment)db.investments[i]={...db.investments[i],...r.investment};
+    invUI.confirmMove=null;renderAll();toast('Movimentação excluída','var(--amber)');
+  }catch(e){invUI.confirmMove=null;renderInvestments();toast(e.message,'var(--red)');}
+}
+async function deleteInv(id){
+  try{
+    await apiFetch('DELETE',`/investments/${id}`);
+    db.investments=db.investments.filter(x=>x.id!==id);db.invMoves=db.invMoves.filter(m=>m.investment_id!==id);delete invUI.panel[id];
+    renderAll();toast('Investimento excluído','var(--amber)');
+  }catch(e){toast(e.message,'var(--red)');}
+}
+
 // ══ OBJETIVOS ══════════════════════════════════════════
 // Tudo acontece dentro da página (sem popups): formulário de novo objetivo no topo
 // e, em cada card, painéis para guardar, retirar, ver histórico, editar e excluir.
@@ -856,7 +1051,7 @@ function renderReports(){
     <div class="trend-item" style="border:none"><span class="trend-month">Taxa de poupança</span><span class="trend-val" style="color:var(--accent2)">${savRate}%</span></div>`;
 
   // ── DISTRIBUIÇÃO INVESTIMENTOS ────────────────────
-  const invMap={};db.investments.forEach(i=>{invMap[i.type]=(invMap[i.type]||0)+parseFloat(i.value||0);});
+  const invMap={};invPortfolio().active.forEach(({inv,c})=>{invMap[inv.type]=(invMap[inv.type]||0)+c.balance;}); // valor atual dos ativos
   const invS=Object.entries(invMap).sort((a,b)=>b[1]-a[1]),invMax=invS[0]?.[1]||1;
   document.getElementById('rptInvRet').innerHTML=`<h4>Distribuição de investimentos</h4>`+(invS.length?invS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${esc(c)}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/invMax*100).toFixed(1)}%;background:var(--accent)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
 
@@ -881,7 +1076,7 @@ function periodLabel(){
   if(!y||y==='all')return'Todo o período';
   return m==='all'?`Ano de ${y}`:`${MESES[parseInt(m)-1]}/${y}`;
 }
-function signed(v){return(v>=0?'+':'−')+fmt(Math.abs(v));}
+function signed(v){return(v>0.005?'+':v<-0.005?'−':'')+fmt(Math.abs(v));}
 function pctTxt(p){const r=Math.round(Math.abs(p));return(r===0?'':p>0?'+':'−')+r.toLocaleString('pt-BR')+'%';}
 // Marcas do eixo Y em números "redondos".
 function niceTicks(min,max,count=4){

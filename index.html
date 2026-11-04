@@ -136,13 +136,29 @@ tr:hover td{background:rgba(108,99,255,.06)}
 .bar-track{flex:1;background:var(--bg3);border-radius:6px;height:9px;overflow:hidden}
 .bar-fill{height:100%;border-radius:6px;transition:.6s}
 .bar-val{font-size:.74rem;color:var(--muted);width:72px;text-align:right;flex-shrink:0}
-.inv-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:.85rem}
-.inv-name{font-weight:700;font-size:.95rem;color:#fff}
+/* ── Investimentos ── */
+.inv-group{margin-bottom:1.5rem}
+.inv-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem;flex-wrap:wrap}
+.inv-group-name{font-size:.82rem;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:.05em}
+.inv-group-meta{font-size:.78rem;color:var(--muted)}
+.inv-share{height:4px;background:var(--bg3);border-radius:4px;margin:.45rem 0 .85rem;overflow:hidden}
+.inv-share>div{height:100%;background:var(--accent);border-radius:4px}
+.inv-tags{display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap;min-height:1.2rem}
 .inv-tag{font-size:.7rem;color:var(--muted);background:var(--bg3);padding:.15rem .5rem;border-radius:5px;border:1px solid var(--border)}
-.inv-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-top:.85rem}
-@media(max-width:600px){.inv-stats{grid-template-columns:repeat(2,1fr)}}
+.inv-tag.rate{color:var(--accent2);border-color:rgba(78,205,196,.3)}
+.inv-tag.warn{color:#fbbf24;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.inv-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem 1rem;margin-top:.9rem}
 .inv-stat label{font-size:.7rem;color:var(--muted);display:block;margin-bottom:.2rem;text-transform:uppercase;letter-spacing:.03em}
-.inv-stat span{font-size:.9rem;font-weight:600;color:#fff}
+.inv-stat span{font-size:.92rem;font-weight:600;color:#fff;font-variant-numeric:tabular-nums}
+.inv-stat span.pos{color:var(--green)}.inv-stat span.neg{color:var(--red)}
+.inv-sub{font-size:.74rem;color:var(--muted);margin-top:.75rem}
+.inv-sub strong{color:#fff}
+.inv-warn{font-size:.76rem;color:#fbbf24;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:.45rem .65rem;margin-top:.75rem}
+.link-btn{background:none;border:none;color:#fff;text-decoration:underline;cursor:pointer;font-size:inherit;padding:0}
+.goal-card.is-closed{opacity:.8}
+.goal-new .mfg select,.goal-panel .mfg select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.5rem .7rem;font-size:.86rem;outline:none}
+.inv-form .yield-mode-tab{font-size:.74rem;padding:.42rem .3rem}
+.inv-form .calc-preview{margin:-.25rem 0 .6rem}
 .yield-mode-tabs{display:flex;background:var(--bg3);border-radius:8px;padding:2px;border:1px solid var(--border);margin-bottom:.75rem}
 .yield-mode-tab{flex:1;text-align:center;padding:.4rem;border-radius:6px;font-size:.78rem;font-weight:500;cursor:pointer;color:var(--muted);transition:.2s;border:none;background:transparent}
 .yield-mode-tab.active{background:var(--accent);color:#fff}
@@ -353,8 +369,10 @@ tr:hover td{background:rgba(108,99,255,.06)}
       <div class="table-wrap"><div id="txTable"></div></div>
     </div>
     <div id="tab-investments" class="tab">
-      <div class="section-header"><span class="section-title">Carteira de Investimentos</span><button class="btn btn-primary" onclick="openInvModal()">+ Investimento</button></div>
+      <div class="section-header"><span class="section-title">Carteira de Investimentos</span><button class="btn btn-primary" onclick="toggleNewInv()">+ Investimento</button></div>
       <div class="cards-row" id="invSummary"></div>
+      <div id="invNotice"></div>
+      <div class="goal-new" id="invNew"></div>
       <div id="invList"></div>
     </div>
     <div id="tab-goals" class="tab">
@@ -459,33 +477,6 @@ tr:hover td{background:rgba(108,99,255,.06)}
 </div>
 
 <!-- MODAL INVESTIMENTO -->
-<div class="modal-bg" id="modal-addInv">
-  <div class="modal">
-    <h3 id="invModalTitle">Novo Investimento</h3>
-    <input type="hidden" id="invEditId">
-    <div class="mfg"><label>Nome <span style="color:var(--red)">*</span></label><input type="text" id="invName" placeholder="Ex: Tesouro Selic, Ações PETR4..."><div class="field-err" id="invNameErr">Informe o nome</div></div>
-    <div class="form-row">
-      <div class="mfg"><label>Tipo</label><select id="invType"><option>Renda Fixa</option><option>Renda Variável</option><option>Fundo Imobiliário</option><option>Ações</option><option>Cripto</option><option>Poupança</option><option>Outro</option></select></div>
-      <div class="mfg"><label>Instituição <span class="info-tag">opcional</span></label><input type="text" id="invInst" placeholder="Ex: Nubank, XP..."></div>
-    </div>
-    <div class="form-row">
-      <div class="mfg"><label>Valor investido (R$) <span style="color:var(--red)">*</span></label><input type="number" id="invVal" placeholder="0,00" step="0.01" oninput="calcInvPreview()"><div class="field-err" id="invValErr">Informe o valor</div></div>
-      <div class="mfg"><label>Data de início <span class="info-tag">opcional</span></label><input type="date" id="invDate" oninput="calcInvPreview()"></div>
-    </div>
-    <div class="mfg"><label>Modo de rendimento</label>
-      <div class="yield-mode-tabs">
-        <button class="yield-mode-tab active" id="yieldTabManual" onclick="setYieldMode('manual')">Manual (R$)</button>
-        <button class="yield-mode-tab" id="yieldTabPct" onclick="setYieldMode('pct')">% ao mês</button>
-        <button class="yield-mode-tab" id="yieldTabPctAnual" onclick="setYieldMode('pctAnual')">% ao ano</button>
-      </div>
-    </div>
-    <div id="yieldManualFields"><div class="mfg"><label>Rendimento acumulado (R$) <span class="info-tag">opcional</span></label><input type="number" id="invYield" placeholder="0,00" step="0.01"></div></div>
-    <div id="yieldPctFields" style="display:none"><div class="mfg"><label>Taxa mensal (%)</label><input type="number" id="invRateMes" placeholder="Ex: 1.05" step="0.01" oninput="calcInvPreview()"></div><div id="invCalcPreview" class="calc-preview" style="display:none"></div></div>
-    <div id="yieldPctAnualFields" style="display:none"><div class="mfg"><label>Taxa anual (%)</label><input type="number" id="invRateAnual" placeholder="Ex: 12.5" step="0.01" oninput="calcInvPreview()"></div><div id="invCalcPreviewAnual" class="calc-preview" style="display:none"></div></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addInv')">Cancelar</button><button class="btn btn-primary" onclick="saveInv()">Salvar</button></div>
-  </div>
-</div>
-
 <!-- MODAL OBJETIVO -->
 <div class="modal-bg" id="modal-addCatExp"><div class="modal"><h3>Nova Categoria de Gasto</h3><div class="mfg"><label>Nome</label><input type="text" id="newCatExpName" placeholder="Ex: Saúde..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addCatExp')">Cancelar</button><button class="btn btn-primary" onclick="saveCat('exp')">Salvar</button></div></div></div>
 <div class="modal-bg" id="modal-addCatRec"><div class="modal"><h3>Nova Categoria de Receita</h3><div class="mfg"><label>Nome</label><input type="text" id="newCatRecName" placeholder="Ex: Freelance..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addCatRec')">Cancelar</button><button class="btn btn-primary" onclick="saveCat('rec')">Salvar</button></div></div></div>

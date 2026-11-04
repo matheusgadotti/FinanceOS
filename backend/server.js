@@ -120,6 +120,13 @@ const SCHEMAS = {
     yield_mode: T.oneOf('manual', 'pct', 'pctAnual'),
     yield_rate: T.num(),
     institution: T.str(150),
+    value_updated_at: T.date(),
+  },
+  investment_movements: {
+    investment_id: T.id(),
+    amount: T.num(),
+    date: T.date(),
+    note: T.str(200),
   },
   goals: {
     name: T.str(150),
@@ -329,11 +336,25 @@ app.get('/investments', authJWT, wrap(async (req, res) => {
   res.json(data);
 }));
 
+// Colunas criadas por migrações. Se a migração ainda não rodou no banco,
+// a gravação é repetida sem elas em vez de falhar.
+const OPTIONAL_INVESTMENT_COLS = ['value_updated_at'];
+async function withOptionalCols(run, fields) {
+  let r = await run(fields);
+  const missing = r.error && /column|schema cache/i.test(r.error.message || '');
+  if (missing && OPTIONAL_INVESTMENT_COLS.some(c => c in fields)) {
+    const rest = { ...fields };
+    OPTIONAL_INVESTMENT_COLS.forEach(c => delete rest[c]);
+    r = Object.keys(rest).length ? await run(rest) : { data: [], error: null };
+  }
+  return r;
+}
+
 app.post('/investments', authJWT, wrap(async (req, res) => {
   const { data: fields, error: invalid } = sanitize(req.body, SCHEMAS.investments);
   if (invalid) return res.status(400).json({ error: invalid });
-  const { data, error } = await supabase
-    .from('investments').insert({ ...fields, user_id: req.userId }).select();
+  const { data, error } = await withOptionalCols(f => supabase
+    .from('investments').insert({ ...f, user_id: req.userId }).select(), fields);
   if (error) return dbFail(res, error, 'Não foi possível salvar o investimento');
   res.json(data);
 }));
@@ -341,19 +362,86 @@ app.post('/investments', authJWT, wrap(async (req, res) => {
 app.patch('/investments/:id', authJWT, wrap(async (req, res) => {
   const { data: fields, error: invalid } = sanitize(req.body, SCHEMAS.investments);
   if (invalid) return res.status(400).json({ error: invalid });
-  const { data, error } = await supabase
-    .from('investments').update(fields)
-    .eq('id', req.params.id).eq('user_id', req.userId).select();
+  const { data, error } = await withOptionalCols(f => supabase
+    .from('investments').update(f)
+    .eq('id', req.params.id).eq('user_id', req.userId).select(), fields);
   if (error) return dbFail(res, error, 'Não foi possível atualizar o investimento');
   res.json(data);
 }));
 
 app.delete('/investments/:id', authJWT, wrap(async (req, res) => {
+  // Apaga as movimentações junto (a tabela também tem "on delete cascade").
+  await supabase.from('investment_movements').delete()
+    .eq('investment_id', req.params.id).eq('user_id', req.userId);
   const { error } = await supabase
     .from('investments').delete()
     .eq('id', req.params.id).eq('user_id', req.userId);
   if (error) return dbFail(res, error, 'Não foi possível excluir o investimento');
   res.json({ success: true });
+}));
+
+// ── APORTES E RESGATES DOS INVESTIMENTOS ─────────────
+// Cada movimentação (positivo = aporte, negativo = resgate) atualiza o "value" do
+// investimento, que guarda o total líquido aplicado. O resgate pode levar também
+// o rendimento, então o "value" pode ficar negativo quando o investimento é encerrado.
+app.get('/investment-movements', authJWT, wrap(async (req, res) => {
+  const { data, error } = await supabase
+    .from('investment_movements').select('*')
+    .eq('user_id', req.userId)
+    .order('date', { ascending: false }).order('created_at', { ascending: false });
+  if (error) return dbFail(res, error, 'Não foi possível carregar as movimentações');
+  res.json(data);
+}));
+
+app.post('/investment-movements', authJWT, wrap(async (req, res) => {
+  const { data: fields, error: invalid } = sanitize(req.body, SCHEMAS.investment_movements);
+  if (invalid) return res.status(400).json({ error: invalid });
+  if (fields.investment_id == null || !fields.amount)
+    return res.status(400).json({ error: 'Informe o investimento e um valor diferente de zero' });
+  fields.amount = round2(fields.amount);
+
+  const { data: inv } = await supabase
+    .from('investments').select('id, value')
+    .eq('id', fields.investment_id).eq('user_id', req.userId).maybeSingle();
+  if (!inv) return res.status(404).json({ error: 'Investimento não encontrado' });
+
+  const { data: rows, error } = await supabase
+    .from('investment_movements')
+    .insert({ ...fields, date: fields.date || today(), user_id: req.userId })
+    .select();
+  if (error) return dbFail(res, error, 'Não foi possível registrar a movimentação');
+
+  const newValue = round2(parseFloat(inv.value || 0) + fields.amount);
+  const { data: updated, error: upErr } = await supabase
+    .from('investments').update({ value: newValue })
+    .eq('id', inv.id).eq('user_id', req.userId).select();
+  if (upErr) {
+    await supabase.from('investment_movements').delete().eq('id', rows[0].id).eq('user_id', req.userId);
+    return dbFail(res, upErr, 'Não foi possível atualizar o investimento');
+  }
+  res.json({ movement: rows[0], investment: updated[0] });
+}));
+
+app.delete('/investment-movements/:id', authJWT, wrap(async (req, res) => {
+  const { data: m } = await supabase
+    .from('investment_movements').select('id, investment_id, amount')
+    .eq('id', req.params.id).eq('user_id', req.userId).maybeSingle();
+  if (!m) return res.status(404).json({ error: 'Movimentação não encontrada' });
+
+  const { data: inv } = await supabase
+    .from('investments').select('id, value')
+    .eq('id', m.investment_id).eq('user_id', req.userId).maybeSingle();
+  if (!inv) return res.status(404).json({ error: 'Investimento não encontrado' });
+
+  const { error } = await supabase
+    .from('investment_movements').delete().eq('id', m.id).eq('user_id', req.userId);
+  if (error) return dbFail(res, error, 'Não foi possível excluir a movimentação');
+  const newValue = round2(parseFloat(inv.value || 0) - parseFloat(m.amount));
+  const { data: updated, error: upErr } = await supabase
+    .from('investments').update({ value: newValue })
+    .eq('id', inv.id).eq('user_id', req.userId).select();
+  if (upErr) return dbFail(res, upErr, 'A movimentação foi excluída, mas o investimento não foi atualizado. Recarregue a página.');
+  res.json({ success: true, investment: updated[0] });
 }));
 
 // ── OBJETIVOS ────────────────────────────────────────

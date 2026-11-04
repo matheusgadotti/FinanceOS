@@ -399,23 +399,106 @@ function invCalc(inv,moves=invMoves(inv.id),at=null){
   const closedAt=closed?moves.filter(m=>parseFloat(m.amount)<0).map(m=>String(m.date).slice(0,10)).sort().pop():null;
   return{net,initial,totalIn,balance:closed?0:balance,yld,pct,closed,closedAt,needsDate,mode};
 }
+// ── Imposto de renda e IOF (estimativa) ──
+// IR pela tabela regressiva sobre o rendimento: até 180 dias 22,5%; 181 a 360 dias 20%; 361 a 720 dias 17,5%; acima de 720 dias 15%.
+// IOF sobre o rendimento em resgates com menos de 30 dias da aplicação (de 96% no 1º dia a 0% no 30º).
+// Cada aplicação/aporte conta o prazo desde a própria data; resgates consomem as aplicações mais antigas primeiro.
+const IOF_TABLE=[96,93,90,86,83,80,76,73,70,66,63,60,56,53,50,46,43,40,36,33,30,26,23,20,16,13,10,6,3];
+const TAX_MODES=[['','Automático'],['regressiva','Tabela regressiva (CDB, Tesouro, LC, fundos)'],['isento','Isento (LCI, LCA, CRI, CRA, poupança)'],['nenhum','Não calcular (ações, FII, cripto)']];
+const TAX_LABEL={regressiva:'tabela regressiva',isento:'isento',nenhum:'não calcular'};
+function irRate(days){return days<=180?.225:days<=360?.20:days<=720?.175:.15;}
+function iofRate(days){return days>=1&&days<30?IOF_TABLE[days-1]/100:0;}
+function isoDays(a,b){return Math.max(0,Math.round((parseISO(b)-parseISO(a))/DAY_MS));}
+// Regime de imposto: o escolhido pelo usuário ou, se não houver, deduzido do tipo e do nome.
+function taxMode(inv){
+  if(inv.tax_mode)return inv.tax_mode;
+  const n=inv.name||'';
+  if(/\b(LCI|LCA|CRI|CRA)\b/i.test(n)||/incentivad|poupan/i.test(n)||inv.type==='Poupança')return'isento';
+  return inv.type==='Renda Fixa'?'regressiva':'nenhum';
+}
+function taxOn(gain,lotDate,at){
+  if(!(gain>0))return{ir:0,iof:0};
+  const d=isoDays(lotDate,at),iof=gain*iofRate(d);
+  return{ir:(gain-iof)*irRate(d),iof};
+}
+// Monta os lotes (aplicação inicial e aportes) e aplica os resgates nos mais antigos primeiro.
+function invTaxSim(inv,c,moves){
+  const today=todayISO(),grow=c.mode!=='manual',evs=[];
+  if(c.initial>0.005)evs.push({date:inv.date||today,amount:c.initial,ord:0,created:''});
+  moves.forEach(m=>evs.push({date:String(m.date).slice(0,10),amount:parseFloat(m.amount),id:m.id,ord:1,created:String(m.created_at||'')}));
+  evs.sort((a,b)=>a.date.localeCompare(b.date)||a.ord-b.ord||a.created.localeCompare(b.created));
+  const lots=[],paid={};
+  for(const ev of evs){
+    if(ev.amount>0){lots.push({date:ev.date,p:ev.amount,a:ev.amount});continue;}
+    let R=-ev.amount,ir=0,iof=0;
+    for(const L of lots){
+      if(R<=1e-9)break;if(L.p<=1e-9)continue;
+      const V=grow?L.p*invGrowth(inv,isoDays(L.date,ev.date)):L.p,take=Math.min(R,V),prin=L.p*take/V;
+      if(grow){const t=taxOn(take-prin,L.date,ev.date);ir+=t.ir;iof+=t.iof;}
+      L.p-=prin;R-=take;
+    }
+    paid[ev.id]={ir:r2(ir),iof:r2(iof)};
+  }
+  return{lots,paid};
+}
+// Imposto estimado de um resgate bruto R na data "at".
+function invTaxFor(inv,c,sim,R,at){
+  if(taxMode(inv)!=='regressiva'||!(R>0)||c.closed)return{ir:0,iof:0};
+  let ir=0,iof=0;
+  if(c.mode==='manual'){
+    // Valor manual: o ganho é repartido entre as aplicações proporcionalmente ao valor de cada uma.
+    const live=sim.lots.filter(L=>L.p>0.005),P=live.reduce((s,L)=>s+L.p,0),f=c.balance>0?Math.min(1,R/c.balance):0;
+    if(P>0&&c.yld>0)live.forEach(L=>{const t=taxOn(c.yld*f*L.p/P,L.date,at);ir+=t.ir;iof+=t.iof;});
+  }else{
+    let left=R;
+    for(const L of sim.lots){
+      if(left<=1e-9)break;if(L.p<=1e-9)continue;
+      const V=L.p*invGrowth(inv,isoDays(L.date,at)),take=Math.min(left,V),prin=L.p*take/V;
+      const t=taxOn(take-prin,L.date,at);ir+=t.ir;iof+=t.iof;left-=take;
+    }
+  }
+  return{ir:r2(ir),iof:r2(iof)};
+}
+// Valor bruto a resgatar para receber "netAmt" líquido (busca binária: o imposto cresce junto com o valor).
+function invGrossForNet(inv,c,sim,netAmt,at){
+  const bal=c.mode==='manual'?c.balance:invCalc(inv,invMoves(inv.id),at).balance;
+  const netOf=R=>{const t=invTaxFor(inv,c,sim,R,at);return R-t.ir-t.iof;};
+  if(netOf(bal)<netAmt-0.005)return null;
+  let lo=netAmt,hi=bal;
+  for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(netOf(mid)<netAmt)lo=mid;else hi=mid;}
+  return Math.min(r2(bal),Math.ceil(hi*100-1e-6)/100);
+}
+function invTaxInfo(inv,c){
+  const tm=taxMode(inv),sim=invTaxSim(inv,c,invMoves(inv.id));
+  const n=invTaxFor(inv,c,sim,c.balance,todayISO()),now={...n,net:r2(c.balance-n.ir-n.iof)};
+  let closed={ir:0,iof:0};
+  if(c.closed&&tm==='regressiva'){
+    if(c.mode!=='manual')Object.values(sim.paid).forEach(t=>{closed.ir+=t.ir;closed.iof+=t.iof;});
+    else{const T=sim.lots.reduce((s,L)=>s+L.a,0);if(T>0&&c.yld>0)sim.lots.forEach(L=>{const t=taxOn(c.yld*L.a/T,L.date,c.closedAt);closed.ir+=t.ir;closed.iof+=t.iof;});}
+    closed={ir:r2(closed.ir),iof:r2(closed.iof)};
+  }
+  return{tm,auto:!inv.tax_mode,sim,now,closed,paid:tm==='regressiva'&&c.mode!=='manual'?sim.paid:{}};
+}
+
 // Totais da carteira (só investimentos ativos) — usados também no Dashboard e nos Relatórios.
 function invPortfolio(){
-  const all=db.investments.map(inv=>({inv,c:invCalc(inv)}));
+  const all=db.investments.map(inv=>{const c=invCalc(inv);return{inv,c,t:invTaxInfo(inv,c)};});
   const active=all.filter(x=>!x.c.closed),closed=all.filter(x=>x.c.closed);
-  const sum=(arr,k)=>r2(arr.reduce((s,x)=>s+x.c[k],0));
-  const net=sum(active,'net'),balance=sum(active,'balance'),yld=sum(active,'yld');
-  return{all,active,closed,net,balance,yld,pct:net>0?yld/net*100:0,realized:sum(closed,'yld')};
+  const sum=(arr,f)=>r2(arr.reduce((s,x)=>s+f(x),0));
+  const net=sum(active,x=>x.c.net),balance=sum(active,x=>x.c.balance),yld=sum(active,x=>x.c.yld);
+  const netAfterTax=sum(active,x=>x.t.now.net),realized=sum(closed,x=>x.c.yld),realizedTax=sum(closed,x=>x.t.closed.ir+x.t.closed.iof);
+  return{all,active,closed,net,balance,yld,pct:net>0?yld/net*100:0,realized,realizedTax,netAfterTax,taxNow:r2(balance-netAfterTax)};
 }
 
 function renderInvestments(){
+  db.taxColOk=!db.investments.length||db.investments.some(i=>'tax_mode' in i); // coluna da migração 003 existe?
   const p=invPortfolio();
   document.getElementById('invSummary').innerHTML=!p.all.length?'':`
     <div class="metric"><label>Total aplicado</label><div class="val neutral">${fmt(p.net)}</div></div>
-    <div class="metric"><label>Patrimônio atual</label><div class="val">${fmt(p.balance)}</div></div>
-    <div class="metric"><label>Rendimento</label><div class="val ${signClass(p.yld)}">${p.yld>0.005?'▲ ':p.yld<-0.005?'▼ ':''}${signed(p.yld)}</div></div>
+    <div class="metric"><label>Patrimônio atual</label><div class="val">${fmt(p.balance)}</div>${p.taxNow>0.005?`<div class="metric-sub">≈ ${fmt(p.netAfterTax)} líquido de IR/IOF</div>`:''}</div>
+    <div class="metric"><label>Rendimento</label><div class="val ${signClass(p.yld)}">${signed(p.yld)}</div></div>
     <div class="metric"><label>Rentabilidade</label><div class="val ${signClass(p.yld)}">${fmtPctBR(p.pct,true)}</div></div>
-    ${p.closed.length?`<div class="metric"><label>Resultado dos encerrados</label><div class="val ${signClass(p.realized)}">${signed(p.realized)}</div></div>`:''}`;
+    ${p.closed.length?`<div class="metric"><label>Resultado dos encerrados</label><div class="val ${signClass(p.realized)}">${signed(p.realized)}</div>${p.realizedTax>0.005?`<div class="metric-sub">≈ ${signed(r2(p.realized-p.realizedTax))} líquido</div>`:''}</div>`:''}`;
   document.getElementById('invNotice').innerHTML=db.invMovesOk?'':'<div class="goal-notice">Aportes e resgates ainda não estão ativos no banco de dados. Por enquanto, para colocar mais dinheiro, altere o valor aplicado em ✏️ Editar.</div>';
   document.getElementById('invNew').classList.toggle('open',invUI.newOpen);
   const el=document.getElementById('invList');
@@ -439,7 +522,7 @@ function renderInvestments(){
   el.innerHTML=html;
 }
 
-function invCard({inv,c}){
+function invCard({inv,c,t}){
   const id=jsArg(inv.id),k=gk(inv.id),panel=invUI.panel[inv.id],moves=invMoves(inv.id);
   let modeTag;
   if(c.mode==='pctAnual')modeTag=`<span class="inv-tag rate">${rateTxt(inv.yield_rate)}% a.a.</span>`;
@@ -450,19 +533,23 @@ function invCard({inv,c}){
     modeTag=`<span class="inv-tag${d>30&&!c.closed?' warn':''}" title="Valor atual informado manualmente">Atualizado ${d===0?'hoje':d===1?'ontem':`há ${d} dias`}</span>`;
   }else modeTag='<span class="inv-tag">Valor manual</span>';
   const since=inv.date?`Desde ${esc(fmtD(inv.date))}`:'';
-  const sub=c.closed?`Encerrado em ${esc(fmtD(c.closedAt))} · resultado <strong>${signed(c.yld)}</strong> (${fmtPctBR(c.pct,true)})`:since;
+  const closedTax=r2(t.closed.ir+t.closed.iof),nowTax=r2(t.now.ir+t.now.iof);
+  const sub=c.closed?`Encerrado em ${esc(fmtD(c.closedAt))} · resultado bruto <strong>${signed(c.yld)}</strong> (${fmtPctBR(c.pct,true)})${closedTax>0?` · líquido ≈ <strong>${signed(r2(c.yld-closedTax))}</strong>`:''}`:since;
+  const taxHint=t.auto?'Definido automaticamente pelo tipo e pelo nome. Altere em ✏️ Editar.':'Imposto de renda';
+  const taxTag=t.tm==='isento'?`<span class="inv-tag" title="${taxHint}">Isento de IR</span>`:t.tm==='regressiva'?`<span class="inv-tag" title="${taxHint}">IR regressivo</span>`:'';
+  const taxLine=!c.closed&&nowTax>0?`<div class="inv-tax">Resgatando tudo hoje: <strong>≈ ${fmt(t.now.net)}</strong> líquido <span>(IR ${fmt(t.now.ir)}${t.now.iof>0?` + IOF ${fmt(t.now.iof)}`:''})</span></div>`:'';
   const warn=c.needsDate&&!c.closed?`<div class="inv-warn">⚠ Informe a data da aplicação para calcular o rendimento. <button class="link-btn" onclick="invPanel(${id},'edit')">Editar</button></div>`:'';
   const ok=db.invMovesOk;
   return`<div class="goal-card inv-card2${c.closed?' is-closed':''}">
     <div class="goal-head"><div class="goal-name">${esc(inv.name)}</div>${c.closed?'<span class="goal-status idle">Encerrado</span>':''}</div>
-    <div class="inv-tags">${inv.institution?`<span class="inv-tag">${esc(inv.institution)}</span>`:''}${modeTag}</div>
+    <div class="inv-tags">${inv.institution?`<span class="inv-tag">${esc(inv.institution)}</span>`:''}${modeTag}${taxTag}</div>
     ${c.closed?'':`<div class="inv-stats">
       <div class="inv-stat"><label>Aplicado</label><span>${fmt(c.net)}</span></div>
       <div class="inv-stat"><label>Valor atual</label><span>${fmt(c.balance)}</span></div>
       <div class="inv-stat"><label>Rendimento</label><span class="${signClass(c.yld)}">${c.yld>0.005?'▲ ':c.yld<-0.005?'▼ ':''}${signed(c.yld)}</span></div>
       <div class="inv-stat"><label>Rentab.</label><span class="${signClass(c.yld)}">${fmtPctBR(c.pct,true)}</span></div>
     </div>`}
-    ${sub?`<div class="inv-sub">${sub}</div>`:''}${warn}
+    ${taxLine}${sub?`<div class="inv-sub">${sub}</div>`:''}${warn}
     <div class="goal-btns">
       ${ok?`<button class="btn btn-primary btn-sm${panel==='in'?' active':''}" onclick="invPanel(${id},'in')">+ Aportar</button>`:''}
       ${ok&&!c.closed?`<button class="btn btn-ghost btn-sm${panel==='out'?' active':''}" onclick="invPanel(${id},'out')"${c.balance>0?'':' disabled'}>− Resgatar</button>`:''}
@@ -470,23 +557,25 @@ function invCard({inv,c}){
       ${ok?`<button class="btn btn-ghost btn-sm${panel==='history'?' active':''}" onclick="invPanel(${id},'history')">Histórico (${moves.length+1})</button>`:''}
       <span class="goal-btns-right"><button class="btn btn-ghost btn-sm${panel==='edit'?' active':''}" onclick="invPanel(${id},'edit')" title="Editar" aria-label="Editar investimento">✏️</button><button class="btn btn-danger btn-sm${panel==='delete'?' active':''}" onclick="invPanel(${id},'delete')" title="Excluir" aria-label="Excluir investimento">🗑</button></span>
     </div>
-    ${panel?`<div class="goal-panel">${invPanelHTML(inv,c,panel,id,k,moves)}</div>`:''}
+    ${panel?`<div class="goal-panel">${invPanelHTML(inv,c,panel,id,k,moves,t)}</div>`:''}
   </div>`;
 }
 
-function invPanelHTML(inv,c,panel,id,k,moves){
+function invPanelHTML(inv,c,panel,id,k,moves,t){
   const key=e=>`onkeydown="invKey(event,${id},()=>${e})"`;
   if(panel==='in'||panel==='out'){
-    const isIn=panel==='in',sign=isIn?1:-1;
-    const chips=isIn?[100,500,1000].map(v=>`<button type="button" class="chip" onclick="setInvAmount(${jsArg(k)},${v},false)">+ ${fmt(v)}</button>`).join('')
-      :`<button type="button" class="chip" onclick="setInvAmount(${jsArg(k)},${c.balance},true)">Tudo (${fmt(c.balance)})</button>`;
+    const isIn=panel==='in',sign=isIn?1:-1,taxed=!isIn&&t.tm==='regressiva',prev=isIn?'':`invMovePreview(${id})`;
+    const chips=isIn?[100,500,1000].map(v=>`<button type="button" class="chip" onclick="setInvAmount(${jsArg(k)},${v},false,${id})">+ ${fmt(v)}</button>`).join('')
+      :`<button type="button" class="chip" onclick="setInvAmount(${jsArg(k)},${c.balance},true,${id})">Tudo (${fmt(c.balance)}${taxed?' bruto':''})</button>`;
     return`<div class="goal-panel-title">${isIn?'Aportar (colocar mais dinheiro)':'Resgatar (tirar dinheiro)'}</div>
+      ${taxed?`<div class="yield-mode-tabs net-tabs" id="imNetTabs-${k}" data-net="0"><button type="button" class="yield-mode-tab active" data-net="0" onclick="invSetNetMode(${jsArg(k)},0,${id})">Valor bruto (sai do investimento)</button><button type="button" class="yield-mode-tab" data-net="1" onclick="invSetNetMode(${jsArg(k)},1,${id})">Valor líquido (cai na conta)</button></div>`:''}
       <div class="goal-chips">${chips}</div>
       <div class="form-row">
-        <div class="mfg"><label>Valor (R$)</label><input type="number" id="imAmount-${k}" step="0.01" min="0.01" inputmode="decimal" placeholder="0,00" oninput="this.dataset.all=''" ${key(`invMove(${id},${sign})`)}></div>
-        <div class="mfg"><label>Data</label><input type="date" id="imDate-${k}" value="${todayISO()}" ${key(`invMove(${id},${sign})`)}></div>
+        <div class="mfg"><label id="imAmountLabel-${k}">Valor (R$)</label><input type="number" id="imAmount-${k}" step="0.01" min="0.01" inputmode="decimal" placeholder="0,00" oninput="this.dataset.all='';${prev}" ${key(`invMove(${id},${sign})`)}></div>
+        <div class="mfg"><label>Data</label><input type="date" id="imDate-${k}" value="${todayISO()}" oninput="${prev}" ${key(`invMove(${id},${sign})`)}></div>
       </div>
       <div class="mfg"><label>Observação <span class="info-tag">opcional</span></label><input type="text" id="imNote-${k}" maxlength="200" placeholder="${isIn?'Ex: aporte mensal':'Ex: resgate para a viagem'}" ${key(`invMove(${id},${sign})`)}></div>
+      ${!isIn?`<div class="inv-tax-prev" id="imTax-${k}"></div>`:''}
       ${!isIn?'<div class="goal-hint">Resgatando o valor total, o investimento é encerrado e vai para “Encerrados”, com o resultado final.</div>':''}
       <div class="goal-err" id="imErr-${k}"></div>
       <div class="goal-actions"><button class="btn btn-ghost btn-sm" onclick="invPanel(${id},null)">Cancelar</button><button class="btn ${isIn?'btn-primary':'btn-ghost'} btn-sm" id="imBtn-${k}" onclick="invMove(${id},${sign})">${isIn?'Aportar':'Resgatar'}</button></div>`;
@@ -503,7 +592,8 @@ function invPanelHTML(inv,c,panel,id,k,moves){
     const rows=moves.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.created_at).localeCompare(String(a.created_at))).map(m=>{
       const a=parseFloat(m.amount),mid=jsArg(m.id);
       if(invUI.confirmMove===m.id)return`<div class="hist-row confirm"><span>Excluir ${a>=0?'este aporte':'este resgate'} de ${fmt(Math.abs(a))}?</span><span><button class="btn btn-ghost btn-sm" onclick="confirmInvMove(null)">Não</button> <button class="btn btn-danger btn-sm" onclick="delInvMove(${mid},${id})">Excluir</button></span></div>`;
-      return`<div class="hist-row"><span class="hist-date">${esc(fmtD(String(m.date).slice(0,10)))}</span><span class="hist-amt">${a>=0?'▲ Aporte':'▼ Resgate'} ${fmt(Math.abs(a))}</span><span class="hist-note">${esc(m.note||'')}</span><button class="hist-del" onclick="confirmInvMove(${mid})" title="Excluir" aria-label="Excluir movimentação">✕</button></div>`;
+      const tx=t.paid[m.id],txv=tx?r2(tx.ir+tx.iof):0;
+      return`<div class="hist-row"><span class="hist-date">${esc(fmtD(String(m.date).slice(0,10)))}</span><span class="hist-amt">${a>=0?'▲ Aporte':'▼ Resgate'} ${fmt(Math.abs(a))}</span><span class="hist-note">${txv>0?`<span class="hist-tax">IR${tx.iof>0?'+IOF':''} ≈ ${fmt(txv)}</span> `:''}${esc(m.note||'')}</span><button class="hist-del" onclick="confirmInvMove(${mid})" title="Excluir" aria-label="Excluir movimentação">✕</button></div>`;
     }).join('');
     const first=`<div class="hist-row"><span class="hist-date">${inv.date?esc(fmtD(inv.date)):'—'}</span><span class="hist-amt">● Aplicação inicial ${fmt(c.initial)}</span><span class="hist-note"></span><span></span></div>`;
     return`<div class="goal-panel-title">Movimentações</div><div class="goal-hist">${rows}${first}</div>`;
@@ -526,11 +616,12 @@ function invFormHTML(p,inv,c,id){
   const enter=`onkeydown="if(event.key==='Enter'){event.preventDefault();${submit.replace(/"/g,'&quot;')}}${edit?'':`if(event.key==='Escape')toggleNewInv(false)`}"`;
   return`<div class="inv-form" id="${p}Form" data-mode="${mode}">
     <div class="goal-panel-title">${edit?'Editar investimento':'Novo investimento'}</div>
-    <div class="mfg"><label>Nome</label><input type="text" id="${p}Name" maxlength="150" placeholder="Ex: Tesouro Selic 2029, CDB Banco X, PETR4..." value="${v(inv&&inv.name)}" ${enter}></div>
+    <div class="mfg"><label>Nome</label><input type="text" id="${p}Name" maxlength="150" placeholder="Ex: Tesouro Selic 2029, CDB Banco X, PETR4..." value="${v(inv&&inv.name)}" oninput="invFormPreview(${jsArg(p)})" ${enter}></div>
     <div class="form-row">
-      <div class="mfg"><label>Tipo</label><select id="${p}Type">${types.map(t=>`<option${(inv?inv.type:'Renda Fixa')===t?' selected':''}>${esc(t)}</option>`).join('')}</select></div>
+      <div class="mfg"><label>Tipo</label><select id="${p}Type" onchange="invFormPreview(${jsArg(p)})">${types.map(t=>`<option${(inv?inv.type:'Renda Fixa')===t?' selected':''}>${esc(t)}</option>`).join('')}</select></div>
       <div class="mfg"><label>Instituição <span class="info-tag">opcional</span></label><input type="text" id="${p}Inst" maxlength="150" placeholder="Ex: Nubank, XP..." value="${v(inv&&inv.institution)}" ${enter}></div>
     </div>
+    <div class="mfg"><label>Imposto de renda</label><select id="${p}Tax" onchange="invFormPreview(${jsArg(p)})">${TAX_MODES.map(([val,l])=>`<option value="${val}"${((inv&&inv.tax_mode)||'')===val?' selected':''}>${l}</option>`).join('')}</select>${db.taxColOk?'':'<div class="goal-hint" style="margin-top:.35rem">Para salvar essa escolha, rode o SQL 003 no Supabase. Até lá, vale o automático.</div>'}</div>
     <div class="form-row">
       <div class="mfg"><label>${hasMoves?'Aplicação inicial (R$)':'Valor aplicado (R$)'}</label><input type="number" id="${p}Value" step="0.01" min="0.01" inputmode="decimal" placeholder="0,00" value="${edit?c.initial.toFixed(2):''}" oninput="invFormPreview(${jsArg(p)})" ${enter}></div>
       <div class="mfg"><label>Data da aplicação</label><input type="date" id="${p}Date" value="${edit?v(inv.date):todayISO()}" oninput="invFormPreview(${jsArg(p)})" ${enter}></div>
@@ -562,7 +653,7 @@ function readInvForm(p,orig){
   const rate=parseFloat(g('Rate').value),curRaw=g('Cur').value;
   const moves=orig?invMoves(orig.id):[],sumMoves=r2(moves.reduce((s,m)=>s+parseFloat(m.amount),0));
   const value=r2((initial||0)+sumMoves);
-  const out={name,type:g('Type').value,institution:g('Inst').value.trim(),value,date,yield_mode:mode,
+  const out={name,type:g('Type').value,institution:g('Inst').value.trim(),tax_mode:g('Tax').value||null,value,date,yield_mode:mode,
     yield_rate:mode==='manual'?null:(isNaN(rate)?null:rate),yield:mode==='manual'?(orig&&orig.yield_mode==='manual'?parseFloat(orig.yield)||0:0):0};
   if(mode==='manual'&&curRaw!==''){
     const cur=r2(parseFloat(curRaw));
@@ -582,12 +673,16 @@ function invFormPreview(p){
   const prev=document.getElementById(p+'Prev');if(!prev)return;
   const f=document.getElementById(p+'Form'),editId=f.closest('.goal-card')?invUI.editing:null;
   const orig=editId!=null?invById(editId):null,r=readInvForm(p,orig);
+  // Mostra no "Automático" qual regime de imposto será usado para esse tipo/nome.
+  const sel=document.getElementById(p+'Tax');
+  if(sel)sel.options[0].text=`Automático (${TAX_LABEL[taxMode({name:document.getElementById(p+'Name').value,type:document.getElementById(p+'Type').value})]})`;
   if(r.error){prev.style.display='none';return;}
-  const c=invCalc({...r.data,id:orig?orig.id:'__novo__'},r.moves);
+  const pseudo={...r.data,id:orig?orig.id:'__novo__'},c=invCalc(pseudo,r.moves),t=invTaxInfo(pseudo,c);
+  const liq=t.now.ir+t.now.iof>0?` · líquido ≈ <strong>${fmt(t.now.net)}</strong>`:'';
   if(r.data.yield_mode!=='manual'){
     const days=daysBetween(r.data.date,new Date());
-    prev.innerHTML=`📊 Hoje: <strong>${fmt(c.balance)}</strong> · rendimento ${signed(c.yld)} em ${days} dia${days===1?'':'s'}`;
-  }else prev.innerHTML=`📊 Rendimento: <strong>${signed(c.yld)}</strong> (${fmtPctBR(c.pct,true)})`;
+    prev.innerHTML=`📊 Hoje: <strong>${fmt(c.balance)}</strong> · rendimento ${signed(c.yld)} em ${days} dia${days===1?'':'s'}${liq}`;
+  }else prev.innerHTML=`📊 Rendimento: <strong>${signed(c.yld)}</strong> (${fmtPctBR(c.pct,true)})${liq}`;
   prev.style.display='block';
 }
 async function saveInvForm(p,id){
@@ -613,7 +708,7 @@ function toggleNewInv(open){
   const box=document.getElementById('invNew');
   box.innerHTML=invUI.newOpen?invFormHTML('in',null,null,null):'';
   renderInvestments();
-  if(invUI.newOpen){document.getElementById('inName').focus();box.scrollIntoView({block:'nearest'});}
+  if(invUI.newOpen){invFormPreview('in');document.getElementById('inName').focus();box.scrollIntoView({block:'nearest'});}
 }
 function invPanel(id,type){
   invUI.panel[id]=type&&invUI.panel[id]!==type?type:null;invUI.confirmMove=null;
@@ -623,10 +718,37 @@ function invPanel(id,type){
   const focus={in:'imAmount-'+k,out:'imAmount-'+k,update:'iuValue-'+k,edit:'ie'+k+'Name'}[t];
   if(focus){const el=document.getElementById(focus);if(el){el.focus();if(el.select)el.select();}}
   if(t==='update')invUpdatePreview(id);
+  if(t==='out')invMovePreview(id);
   if(t==='edit')invFormPreview('ie'+k);
 }
 function invKey(e,id,action){if(e.key==='Enter'){e.preventDefault();action();}else if(e.key==='Escape')invPanel(id,null);}
-function setInvAmount(k,v,all){const el=document.getElementById('imAmount-'+k);if(el){el.value=r2(v).toFixed(2);el.dataset.all=all?'1':'';el.classList.remove('invalid');el.focus();}}
+function setInvAmount(k,v,all,id){
+  if(all&&document.getElementById('imNetTabs-'+k))invSetNetMode(k,0,id); // "Tudo" é sempre o valor bruto
+  const el=document.getElementById('imAmount-'+k);if(el){el.value=r2(v).toFixed(2);el.dataset.all=all?'1':'';el.classList.remove('invalid');el.focus();}
+  invMovePreview(id);
+}
+// Resgate: o valor digitado é o bruto (sai do investimento) ou o líquido (cai na conta)?
+function invSetNetMode(k,net,id){
+  const tabs=document.getElementById('imNetTabs-'+k);if(!tabs)return;
+  tabs.dataset.net=String(net);
+  tabs.querySelectorAll('.yield-mode-tab').forEach(b=>b.classList.toggle('active',b.dataset.net===String(net)));
+  document.getElementById('imAmountLabel-'+k).textContent=net?'Valor líquido (R$)':'Valor (R$)';
+  document.getElementById('imAmount-'+k).dataset.all='';
+  invMovePreview(id);
+}
+function invMovePreview(id){
+  const inv=invById(id),k=gk(id),el=document.getElementById('imTax-'+k);if(!inv||!el)return;
+  const c=invCalc(inv),t=invTaxInfo(inv,c);
+  if(t.tm!=='regressiva'){el.innerHTML=t.tm==='isento'?'Investimento isento de IR.':'';return;}
+  const amt=parseFloat(document.getElementById('imAmount-'+k).value),date=document.getElementById('imDate-'+k).value||todayISO();
+  if(!(amt>0)){el.innerHTML='Digite o valor para ver o imposto estimado.';return;}
+  const tabs=document.getElementById('imNetTabs-'+k),net=tabs&&tabs.dataset.net==='1';
+  let gross=amt;
+  if(net){gross=invGrossForNet(inv,c,t.sim,amt,date);if(gross==null){el.innerHTML='Esse valor líquido é maior do que o disponível.';return;}}
+  const tx=invTaxFor(inv,c,t.sim,gross,date),iof=tx.iof>0?` · IOF ≈ ${fmt(tx.iof)}`:'';
+  el.innerHTML=net?`Resgate bruto ≈ <strong>${fmt(gross)}</strong> · IR ≈ ${fmt(tx.ir)}${iof}`
+    :`IR ≈ ${fmt(tx.ir)}${iof} · você recebe ≈ <strong>${fmt(r2(gross-tx.ir-tx.iof))}</strong>`;
+}
 function confirmInvMove(mid){invUI.confirmMove=mid;renderInvestments();}
 function invUpdatePreview(id){
   const inv=invById(id),k=gk(id),c=invCalc(inv),el=document.getElementById('iuPrev-'+k);if(!el)return;
@@ -652,6 +774,13 @@ async function invMove(id,sign){
   const date=document.getElementById('imDate-'+k).value||todayISO();
   let amount=r2(parseFloat(amtEl.value));
   if(sign<0){
+    // Valor líquido informado: converte para o bruto que sai do investimento.
+    const tabs=document.getElementById('imNetTabs-'+k);
+    if(tabs&&tabs.dataset.net==='1'&&amtEl.dataset.all!=='1'&&amount>0){
+      const c0=invCalc(inv),g=invGrossForNet(inv,c0,invTaxInfo(inv,c0).sim,amount,date);
+      if(g==null){err.textContent='Esse valor líquido é maior do que o disponível';amtEl.classList.add('invalid');amtEl.focus();return;}
+      amount=g;
+    }
     // "Tudo": recalcula o saldo na data escolhida, para o investimento zerar certinho.
     const bal=inv.yield_mode==='manual'?invCalc(inv).balance:invCalc(inv,invMoves(id),date).balance;
     if(amtEl.dataset.all==='1')amount=r2(bal);
@@ -1314,7 +1443,7 @@ async function changePassword(){
   }catch(e){msg.style.color='var(--red)';msg.textContent=e.message;}
 }
 document.addEventListener('DOMContentLoaded',()=>{
-  document.querySelectorAll('.modal-bg').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
+  // Popups (ex.: Adicionar transação) fecham só pelo Cancelar ou ao salvar — clicar fora não fecha, para não perder o que foi digitado.
   initChartTips();
   // Redesenha os relatórios ao redimensionar a janela (os gráficos usam a largura real do card).
   let rptResize;window.addEventListener('resize',()=>{clearTimeout(rptResize);rptResize=setTimeout(()=>{if(document.getElementById('tab-reports').classList.contains('active'))renderReports();},150);});

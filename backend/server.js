@@ -121,6 +121,7 @@ const SCHEMAS = {
     yield_rate: T.num(),
     institution: T.str(150),
     value_updated_at: T.date(),
+    tax_mode: T.oneOf('regressiva', 'isento', 'nenhum', null),
   },
   investment_movements: {
     investment_id: T.id(),
@@ -338,16 +339,19 @@ app.get('/investments', authJWT, wrap(async (req, res) => {
 
 // Colunas criadas por migrações. Se a migração ainda não rodou no banco,
 // a gravação é repetida sem elas em vez de falhar.
-const OPTIONAL_INVESTMENT_COLS = ['value_updated_at'];
+const OPTIONAL_INVESTMENT_COLS = ['value_updated_at', 'tax_mode'];
 async function withOptionalCols(run, fields) {
-  let r = await run(fields);
-  const missing = r.error && /column|schema cache/i.test(r.error.message || '');
-  if (missing && OPTIONAL_INVESTMENT_COLS.some(c => c in fields)) {
-    const rest = { ...fields };
-    OPTIONAL_INVESTMENT_COLS.forEach(c => delete rest[c]);
-    r = Object.keys(rest).length ? await run(rest) : { data: [], error: null };
+  const f = { ...fields };
+  for (;;) {
+    const r = await run(f);
+    if (!r.error) return r;
+    // Remove só a coluna que o banco disse não conhecer e tenta de novo.
+    const msg = r.error.message || '';
+    const col = OPTIONAL_INVESTMENT_COLS.find(c => c in f && msg.includes(c));
+    if (!col) return r;
+    delete f[col];
+    if (!Object.keys(f).length) return { data: [], error: null };
   }
-  return r;
 }
 
 app.post('/investments', authJWT, wrap(async (req, res) => {

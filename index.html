@@ -156,6 +156,43 @@ tr:hover td{background:rgba(108,99,255,.06)}
 .trend-item{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border)}
 .trend-item:last-child{border-bottom:none}
 .trend-month{font-size:.82rem;color:var(--muted)}.trend-val{font-size:.82rem;font-weight:600;color:#fff}
+.two-col>*{min-width:0}
+.rpt-sub{font-size:.74rem;color:var(--muted);margin:-.55rem 0 .85rem}
+.rpt-sub.rpt-foot{margin:.5rem 0 0}
+.rpt-summary{display:flex;flex-wrap:wrap;gap:.3rem 1.25rem;font-size:.8rem;color:var(--muted);margin-bottom:.85rem}
+.rpt-summary strong{color:#fff;font-weight:600}
+.rpt-legend{display:flex;flex-wrap:wrap;gap:.3rem 1rem;font-size:.72rem;color:var(--muted);margin-bottom:.75rem}
+.rpt-legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:.35rem;vertical-align:-1px}
+.rpt-svg{display:block;max-width:100%;height:auto;overflow:visible}
+.hov .guide{opacity:0}.hov:hover .guide{opacity:.5}
+.rpt-table summary{font-size:.74rem;color:var(--muted);cursor:pointer;margin-top:.75rem;user-select:none}
+.rpt-table summary:hover{color:#fff}
+.rpt-table table{margin-top:.5rem;font-size:.76rem;font-variant-numeric:tabular-nums}
+.rpt-table th,.rpt-table td{padding:.4rem .6rem}
+.cmp-row{display:grid;grid-template-columns:minmax(70px,110px) minmax(60px,1fr) auto;align-items:center;gap:.65rem;margin-bottom:.55rem;font-size:.78rem}
+.cmp-label{color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmp-track{display:flex;height:8px;position:relative}
+.cmp-track::after{content:'';position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--muted);opacity:.5}
+.cmp-half{flex:1;display:flex;background:var(--bg3)}
+.cmp-half.neg{justify-content:flex-end;border-radius:4px 0 0 4px}
+.cmp-half.pos{border-radius:0 4px 4px 0}
+.cmp-half.neg .cmp-bar{background:var(--green);border-radius:4px 0 0 4px}
+.cmp-half.pos .cmp-bar{background:var(--red);border-radius:0 4px 4px 0}
+.cmp-val{color:var(--muted);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:.74rem}
+.top-row{display:flex;align-items:center;gap:.75rem;padding:.55rem 0;border-bottom:1px solid var(--border)}
+.top-row:last-child{border-bottom:none}
+.top-rank{width:22px;height:22px;border-radius:50%;background:var(--bg3);color:var(--muted);font-size:.72rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top-main{flex:1;min-width:0}
+.top-desc{font-size:.82rem;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-meta{font-size:.7rem;color:var(--muted);margin-top:.2rem}
+.top-val{font-size:.82rem;font-weight:600;color:#fff;text-align:right;white-space:nowrap}
+.top-val small{display:block;font-size:.68rem;font-weight:400;color:var(--muted)}
+.sub-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem}
+.sub-label{width:120px;flex-shrink:0;min-width:0;line-height:1.2}
+.sub-label span{display:block;font-size:.78rem;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub-label small{display:block;font-size:.66rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#chartTip{position:fixed;z-index:999;pointer-events:none;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:.45rem .65rem;font-size:.74rem;line-height:1.45;color:#fff;white-space:pre-line;max-width:260px;box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .12s}
+#chartTip.show{opacity:1}
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--accent);color:#fff;padding:.65rem 1.2rem;border-radius:10px;font-size:.85rem;z-index:200;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none}
 .toast.show{opacity:1;transform:translateY(0)}
 .filter-row{display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap}
@@ -279,15 +316,16 @@ tr:hover td{background:rgba(108,99,255,.06)}
       <div id="rptLineChart" style="display:none"></div>
       <div class="two-col">
         <div class="report-card" id="rptFluxo"></div>
-        <div class="report-card" id="rptEvo"></div>
+        <div class="report-card" id="rptCompare"></div>
+      </div>
+      <div class="report-card" id="rptSaldoAcum"></div>
+      <div class="two-col">
+        <div class="report-card" id="rptTopExp"></div>
+        <div class="report-card" id="rptSubcat"></div>
       </div>
       <div class="two-col">
-        <div class="report-card" id="rptCatExp"></div>
-        <div class="report-card" id="rptCatRec"></div>
-      </div>
-      <div class="two-col">
+        <div class="report-card" id="rptParcelas"></div>
         <div class="report-card" id="rptInvRet"></div>
-        <div class="report-card" id="rptDonut"></div>
       </div>
       <div class="report-card" id="rptTrend"></div>
     </div>

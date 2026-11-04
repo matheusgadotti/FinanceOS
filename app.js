@@ -618,60 +618,221 @@ function renderReports(){
   })();
 
   // ── FLUXO DE CAIXA ───────────────────────────────
-  document.getElementById('rptFluxo').innerHTML=`<h4>Fluxo de caixa</h4>
+  document.getElementById('rptFluxo').innerHTML=`<h4>Fluxo de caixa</h4><div class="rpt-sub">${esc(periodLabel())}</div>
     <div class="trend-item"><span class="trend-month">Receitas</span><span class="trend-val" style="color:var(--green)">${fmt(mRec)}</span></div>
     <div class="trend-item"><span class="trend-month">Gastos</span><span class="trend-val" style="color:var(--red)">${fmt(mExp)}</span></div>
     <div class="trend-item"><span class="trend-month">Saldo</span><span class="trend-val" style="color:${mBal>=0?'var(--green)':'var(--red)'}">${fmt(mBal)}</span></div>
     <div class="trend-item" style="border:none"><span class="trend-month">Taxa de poupança</span><span class="trend-val" style="color:var(--accent2)">${savRate}%</span></div>`;
-
-  // ── EVOLUÇÃO 6 MESES ─────────────────────────────
-  const evo=m12.slice(-6);
-  document.getElementById('rptEvo').innerHTML=`<h4>Evolução mensal (6 meses)</h4>`+evo.map(e=>`<div class="trend-item"><span class="trend-month">${e.label}</span><div style="display:flex;gap:1rem"><span class="trend-val" style="color:var(--green)">${fmt(e.rec)}</span><span class="trend-val" style="color:var(--red)">${fmt(e.exp)}</span></div></div>`).join('');
-
-  // ── GASTOS POR CATEGORIA ─────────────────────────
-  const expMap={};mTx.filter(t=>t.type==='gasto').forEach(t=>{expMap[t.category]=(expMap[t.category]||0)+parseFloat(t.value);});
-  const expS=Object.entries(expMap).sort((a,b)=>b[1]-a[1]),expMax=expS[0]?.[1]||1;
-  document.getElementById('rptCatExp').innerHTML=`<h4>Gastos por categoria</h4>`+(expS.length?expS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${esc(c)}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/expMax*100).toFixed(1)}%;background:var(--red)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
-
-  // ── RECEITAS POR CATEGORIA ────────────────────────
-  const recMap={};mTx.filter(t=>t.type==='receita').forEach(t=>{recMap[t.category]=(recMap[t.category]||0)+parseFloat(t.value);});
-  const recS=Object.entries(recMap).sort((a,b)=>b[1]-a[1]),recMax=recS[0]?.[1]||1;
-  document.getElementById('rptCatRec').innerHTML=`<h4>Receitas por categoria</h4>`+(recS.length?recS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${esc(c)}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/recMax*100).toFixed(1)}%;background:var(--green)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
 
   // ── DISTRIBUIÇÃO INVESTIMENTOS ────────────────────
   const invMap={};db.investments.forEach(i=>{invMap[i.type]=(invMap[i.type]||0)+parseFloat(i.value||0);});
   const invS=Object.entries(invMap).sort((a,b)=>b[1]-a[1]),invMax=invS[0]?.[1]||1;
   document.getElementById('rptInvRet').innerHTML=`<h4>Distribuição de investimentos</h4>`+(invS.length?invS.map(([c,v])=>`<div class="progress-row"><div class="progress-label">${esc(c)}</div><div class="progress-track"><div class="progress-fill" style="width:${(v/invMax*100).toFixed(1)}%;background:var(--accent)"></div></div><div class="progress-pct">${fmt(v)}</div></div>`).join(''):'<div class="empty-state">Sem dados</div>');
 
-  // ── DONUT — GASTOS VS RECEITAS ────────────────────
-  (()=>{
-    const total=mRec+mExp;
-    if(!total){document.getElementById('rptDonut').innerHTML='<h4>Proporção receitas vs gastos</h4><div class="empty-state">Sem dados</div>';return;}
-    const R=70,cx=90,cy=90,stroke=22;
-    const pctRec=mRec/total,pctExp=mExp/total;
-    const circ=2*Math.PI*R;
-    const dRec=circ*pctRec,dExp=circ*pctExp;
-    const recArc=`stroke-dasharray="${dRec} ${circ}" stroke-dashoffset="0"`;
-    const expArc=`stroke-dasharray="${dExp} ${circ}" stroke-dashoffset="${-dRec}"`;
-    const svg=`<svg viewBox="0 0 200 180" style="width:160px;flex-shrink:0">
-      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#22263a" stroke-width="${stroke}"/>
-      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#22c55e" stroke-width="${stroke}" ${recArc} transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round"/>
-      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#ef4444" stroke-width="${stroke}" ${expArc} transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round"/>
-      <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="11" fill="#a0aec0">Saldo</text>
-      <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="13" font-weight="bold" fill="${mBal>=0?'#22c55e':'#ef4444'}">${fmt(mBal)}</text>
-    </svg>`;
-    const legend=`<div style="display:flex;flex-direction:column;gap:.6rem;justify-content:center">
-      <div><div style="width:10px;height:10px;background:#22c55e;border-radius:50%;display:inline-block;margin-right:.4rem"></div><span style="font-size:.78rem;color:#a0aec0">Receitas</span><div style="font-size:.9rem;font-weight:600;color:#22c55e;margin-left:1rem">${fmt(mRec)} (${(pctRec*100).toFixed(0)}%)</div></div>
-      <div><div style="width:10px;height:10px;background:#ef4444;border-radius:50%;display:inline-block;margin-right:.4rem"></div><span style="font-size:.78rem;color:#a0aec0">Gastos</span><div style="font-size:.9rem;font-weight:600;color:#ef4444;margin-left:1rem">${fmt(mExp)} (${(pctExp*100).toFixed(0)}%)</div></div>
-    </div>`;
-    document.getElementById('rptDonut').innerHTML=`<h4>Proporção receitas vs gastos</h4><div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">${svg}${legend}</div>`;
-  })();
+  // ── GRÁFICOS NOVOS ───────────────────────────────
+  renderCompare();renderSaldoAcum();renderTopExp();renderSubcat();renderParcelas();
 
   // ── TENDÊNCIA ANUAL ───────────────────────────────
   const maxVal=Math.max(...m12.flatMap(e=>[e.rec,e.exp]),1);
   document.getElementById('rptTrend').innerHTML=`<h4>Tendência anual — receitas vs gastos</h4>`+m12.map(e=>`<div class="trend-item"><span class="trend-month" style="min-width:65px">${e.label}</span><div style="flex:1;display:flex;flex-direction:column;gap:3px;padding:0 .75rem"><div class="bar-track" style="height:7px"><div class="bar-fill" style="width:${(e.rec/maxVal*100).toFixed(1)}%;background:var(--green)"></div></div><div class="bar-track" style="height:7px"><div class="bar-fill" style="width:${(e.exp/maxVal*100).toFixed(1)}%;background:var(--red)"></div></div></div><div style="display:flex;gap:.75rem;font-size:.75rem;font-weight:600"><span style="color:var(--green)">${fmt(e.rec)}</span><span style="color:var(--red)">${fmt(e.exp)}</span></div></div>`).join('');
 }
 
+
+// ══ RELATÓRIOS — gráficos e utilitários ══════════════
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MES_CURTO=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const CHART={grid:'#2e3354',zero:'#4a5078',axis:'#a0aec0',surface:'#1e2235',accent:'#6c63ff',amber:'#d97706'};
+function ymKey(y,m){return`${y}-${String(m).padStart(2,'0')}`;}
+function monthKeyOffset(offset){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+offset);return ymKey(d.getFullYear(),d.getMonth()+1);}
+function keyLabel(k){const[y,m]=k.split('-');return`${MES_CURTO[parseInt(m)-1]}/${y.slice(2)}`;}
+function periodLabel(){
+  const y=document.getElementById('yearSel').value,m=document.getElementById('monthSel').value;
+  if(!y||y==='all')return'Todo o período';
+  return m==='all'?`Ano de ${y}`:`${MESES[parseInt(m)-1]}/${y}`;
+}
+function signed(v){return(v>=0?'+':'−')+fmt(Math.abs(v));}
+function pctTxt(p){const r=Math.round(Math.abs(p));return(r===0?'':p>0?'+':'−')+r.toLocaleString('pt-BR')+'%';}
+// Marcas do eixo Y em números "redondos".
+function niceTicks(min,max,count=4){
+  if(min===max)max=min+1;
+  const raw=(max-min)/count,mag=Math.pow(10,Math.floor(Math.log10(raw))),n=raw/mag;
+  const step=(n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*mag;
+  const lo=Math.floor(min/step)*step,hi=Math.ceil(max/step)*step,ticks=[];
+  for(let v=lo;v<=hi+step/2;v+=step)ticks.push(Math.round(v*100)/100);
+  return ticks;
+}
+function fmtTick(v,compact){return v===0?'0':compact?(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+'k':v.toLocaleString('pt-BR',{maximumFractionDigits:0});}
+// Largura real do card (em px) para o texto do gráfico não encolher no celular.
+function chartWidth(el,fallback){const w=el.clientWidth-40;return w>0?Math.max(260,w):fallback;}
+// Tabela com os mesmos números do gráfico (células já escapadas).
+function valuesTable(head,rows){return`<details class="rpt-table"><summary>Ver valores</summary><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`;}
+
+// Período de comparação: mês anterior, ou o ano anterior. Se o período ainda está
+// em andamento, compara só até o dia de hoje nos dois lados (ex.: 1–4 nov vs 1–4 out).
+function comparePeriods(){
+  const y=document.getElementById('yearSel').value,m=document.getElementById('monthSel').value;
+  if(!y||y==='all')return null;
+  const Y=parseInt(y),now=new Date(),day=now.getDate(),md=`${String(now.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  if(m!=='all'){
+    const M=parseInt(m),pY=M===1?Y-1:Y,pM=M===1?12:M-1,ck=ymKey(Y,M),pk=ymKey(pY,pM);
+    const partial=ck===monthKeyOffset(0),upTo=t=>!partial||parseInt(t.date.slice(8,10))<=day;
+    const lbl=(mm,yy)=>partial?`1–${day} de ${MESES[mm-1]}/${yy}`:`${MESES[mm-1]}/${yy}`;
+    return{cur:t=>t.date.slice(0,7)===ck&&upTo(t),prev:t=>t.date.slice(0,7)===pk&&upTo(t),curLabel:lbl(M,Y),prevLabel:lbl(pM,pY)};
+  }
+  const partial=Y===now.getFullYear(),inYear=(t,yy)=>t.date.slice(0,4)===String(yy)&&(!partial||t.date.slice(5,10)<=md);
+  const lbl=yy=>partial?`${yy} até ${String(day).padStart(2,'0')}/${md.slice(0,2)}`:String(yy);
+  return{cur:t=>inYear(t,Y),prev:t=>inYear(t,Y-1),curLabel:lbl(Y),prevLabel:lbl(Y-1)};
+}
+
+// ── GASTOS VS PERÍODO ANTERIOR (barras divergentes por categoria) ──
+function renderCompare(){
+  const el=document.getElementById('rptCompare'),p=comparePeriods();
+  const title='<h4>Gastos vs período anterior</h4>';
+  if(!p){el.innerHTML=title+'<div class="empty-state">Escolha um ano no topo da página para comparar com o período anterior.</div>';return;}
+  const cur={},prev={};
+  db.transactions.forEach(t=>{
+    if(t.type!=='gasto'||!t.date)return;
+    const v=parseFloat(t.value||0),c=t.category||'Sem categoria';
+    if(p.cur(t))cur[c]=(cur[c]||0)+v;else if(p.prev(t))prev[c]=(prev[c]||0)+v;
+  });
+  const sum=o=>Object.values(o).reduce((a,b)=>a+b,0),totCur=sum(cur),totPrev=sum(prev);
+  const sub=`<div class="rpt-sub">${esc(p.curLabel)} comparado com ${esc(p.prevLabel)}</div>`;
+  if(!totCur&&!totPrev){el.innerHTML=title+sub+'<div class="empty-state">Sem gastos nos dois períodos</div>';return;}
+  const dTot=totCur-totPrev;
+  const totTxt=totPrev?`${dTot>=0?'▲':'▼'} ${pctTxt(dTot/totPrev*100)} (${signed(dTot)})`:'Sem gastos no período anterior';
+  const rows=[...new Set([...Object.keys(cur),...Object.keys(prev)])]
+    .map(c=>({c,a:cur[c]||0,b:prev[c]||0,d:(cur[c]||0)-(prev[c]||0)}))
+    .filter(r=>Math.abs(r.d)>=0.005).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
+  const shown=rows.slice(0,8),rest=rows.length-shown.length,maxAbs=Math.max(...shown.map(r=>Math.abs(r.d)),1);
+  const body=shown.map(r=>{
+    const w=(Math.abs(r.d)/maxAbs*100).toFixed(1),bar=`<div class="cmp-bar" style="width:${w}%"></div>`;
+    const pct=r.b?` (${pctTxt(r.d/r.b*100)})`:' (novo)';
+    const tip=`${r.c}\n${p.curLabel}: ${fmt(r.a)}\n${p.prevLabel}: ${fmt(r.b)}\nDiferença: ${signed(r.d)}`;
+    return`<div class="cmp-row" data-tip="${esc(tip)}"><div class="cmp-label">${esc(r.c)}</div><div class="cmp-track"><div class="cmp-half neg">${r.d<0?bar:''}</div><div class="cmp-half pos">${r.d>0?bar:''}</div></div><div class="cmp-val">${r.d>0?'▲':'▼'} ${signed(r.d)}${pct}</div></div>`;
+  }).join('');
+  el.innerHTML=title+sub+
+    `<div class="rpt-summary"><span>Total: <strong>${fmt(totCur)}</strong></span><span>${esc(totTxt)}</span></div>`+
+    `<div class="rpt-legend"><span><i class="sw" style="background:var(--green)"></i>▼ Gastou menos</span><span><i class="sw" style="background:var(--red)"></i>▲ Gastou mais</span></div>`+
+    (body||'<div class="empty-state">Nenhuma categoria mudou</div>')+
+    (rest>0?`<div class="rpt-sub rpt-foot">+ ${rest} categoria${rest>1?'s':''} com variação menor</div>`:'');
+}
+
+// ── SALDO ACUMULADO (linha, 12 meses) ──
+function renderSaldoAcum(){
+  const el=document.getElementById('rptSaldoAcum');
+  const title='<h4>Saldo acumulado — 12 meses</h4><div class="rpt-sub">Tudo o que entrou menos tudo o que saiu, somado mês a mês desde o primeiro lançamento</div>';
+  if(!db.transactions.length){el.innerHTML=title+'<div class="empty-state">Sem dados</div>';return;}
+  const keys=[];for(let i=11;i>=0;i--)keys.push(monthKeyOffset(-i));
+  const net={};keys.forEach(k=>net[k]=0);let opening=0;
+  db.transactions.forEach(t=>{
+    if(!t.date)return;
+    const k=t.date.slice(0,7),v=parseFloat(t.value||0)*(t.type==='receita'?1:-1);
+    if(k<keys[0])opening+=v;else if(k in net)net[k]+=v;
+  });
+  let acc=opening;const pts=keys.map(k=>{acc+=net[k];return{k,v:acc,net:net[k]};});
+  const W=chartWidth(el,640),H=220,pad={t:18,r:16,b:28,l:58},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  const vals=pts.map(p=>p.v),ticks=niceTicks(Math.min(0,...vals),Math.max(0,...vals));
+  const lo=ticks[0],hi=ticks[ticks.length-1],range=hi-lo||1,compact=Math.max(Math.abs(lo),Math.abs(hi))>=10000;
+  const X=i=>pad.l+i*cW/(pts.length-1),Y=v=>pad.t+cH*(1-(v-lo)/range);
+  let grid='',labels='',hov='';
+  ticks.forEach(t=>{const y=Y(t).toFixed(1);grid+=`<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="${t===0?CHART.zero:CHART.grid}" stroke-width="1"/><text x="${pad.l-8}" y="${(+y+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="${CHART.axis}">${fmtTick(t,compact)}</text>`;});
+  const line=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
+  const base=Y(Math.min(Math.max(0,lo),hi)).toFixed(1);
+  const area=`${line} L${X(pts.length-1).toFixed(1)},${base} L${X(0).toFixed(1)},${base} Z`;
+  const colW=cW/(pts.length-1),step=Math.ceil(46/colW); // pula rótulos de mês se não couberem
+  pts.forEach((p,i)=>{
+    const x=X(i).toFixed(1),y=Y(p.v).toFixed(1);
+    if((pts.length-1-i)%step===0)labels+=`<text x="${x}" y="${H-8}" text-anchor="middle" font-size="10" fill="${CHART.axis}">${keyLabel(p.k)}</text>`;
+    const tip=`${keyLabel(p.k)}\nSaldo acumulado: ${fmt(p.v)}\nNo mês: ${signed(p.net)}`;
+    hov+=`<g class="hov" data-tip="${esc(tip)}"><rect x="${(X(i)-colW/2).toFixed(1)}" y="${pad.t}" width="${colW.toFixed(1)}" height="${cH}" fill="transparent"/><line class="guide" x1="${x}" y1="${pad.t}" x2="${x}" y2="${pad.t+cH}" stroke="${CHART.axis}" stroke-width="1"/><circle cx="${x}" cy="${y}" r="4" fill="${CHART.accent}" stroke="${CHART.surface}" stroke-width="2"/></g>`;
+  });
+  const last=pts[pts.length-1],ly=Y(last.v)-10<pad.t+4?Y(last.v)+20:Y(last.v)-10;
+  const endLbl=`<text x="${(X(pts.length-1)-8).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="end" font-size="11" font-weight="600" fill="#fff" pointer-events="none">${fmt(last.v)}</text>`;
+  const ch=last.v-opening;
+  el.innerHTML=title+
+    `<div class="rpt-summary"><span>Saldo atual: <strong>${fmt(last.v)}</strong></span><span>Em 12 meses: <strong>${ch>=0?'▲':'▼'} ${signed(ch)}</strong></span></div>`+
+    `<svg class="rpt-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Saldo acumulado nos últimos 12 meses">${grid}<path d="${area}" fill="${CHART.accent}" fill-opacity=".1"/><path d="${line}" fill="none" stroke="${CHART.accent}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${hov}${endLbl}${labels}</svg>`+
+    valuesTable(['Mês','No mês','Acumulado'],pts.map(p=>[keyLabel(p.k),signed(p.net),fmt(p.v)]));
+}
+
+// ── MAIORES GASTOS DO PERÍODO ──
+function renderTopExp(){
+  const el=document.getElementById('rptTopExp');
+  const title=`<h4>Maiores gastos</h4><div class="rpt-sub">${esc(periodLabel())}</div>`;
+  const exp=filterTx(db.transactions).filter(t=>t.type==='gasto');
+  if(!exp.length){el.innerHTML=title+'<div class="empty-state">Sem gastos no período</div>';return;}
+  const tot=exp.reduce((s,t)=>s+parseFloat(t.value||0),0);
+  const top=[...exp].sort((a,b)=>parseFloat(b.value)-parseFloat(a.value)).slice(0,5);
+  el.innerHTML=title+top.map((t,i)=>{
+    const v=parseFloat(t.value||0),share=tot?Math.round(v/tot*100):0;
+    const inst=t.installment_total>1?` <span class="badge badge-inst">${esc(t.installment_current)}/${esc(t.installment_total)}x</span>`:'';
+    return`<div class="top-row"><span class="top-rank">${i+1}</span><div class="top-main"><div class="top-desc">${esc(t.desc||t.description||t.category)}</div><div class="top-meta">${esc(fmtD(t.date))} · <span class="badge badge-cat">${esc(t.category)}</span>${inst}</div></div><div class="top-val">${fmt(v)}<small>${share}% dos gastos</small></div></div>`;
+  }).join('');
+}
+
+// ── GASTOS POR SUBCATEGORIA (barras ordenadas) ──
+function renderSubcat(){
+  const el=document.getElementById('rptSubcat');
+  const title=`<h4>Gastos por subcategoria</h4><div class="rpt-sub">${esc(periodLabel())}</div>`;
+  const all=filterTx(db.transactions).filter(t=>t.type==='gasto'),exp=all.filter(t=>t.subcategory);
+  if(!exp.length){el.innerHTML=title+'<div class="empty-state">Nenhum gasto com subcategoria neste período. As subcategorias são criadas em Configurações.</div>';return;}
+  const tot=all.reduce((s,t)=>s+parseFloat(t.value||0),0),map={};
+  exp.forEach(t=>{const k=t.category+'\u0000'+t.subcategory;map[k]=(map[k]||0)+parseFloat(t.value||0);});
+  let rows=Object.entries(map).map(([k,v])=>{const[cat,sub]=k.split('\u0000');return{cat,sub,v};}).sort((a,b)=>b.v-a.v);
+  if(rows.length>8){const tail=rows.slice(7);rows=rows.slice(0,7).concat({cat:`${tail.length} subcategorias`,sub:'Outras',v:tail.reduce((s,r)=>s+r.v,0)});}
+  const max=rows[0].v||1;
+  el.innerHTML=title+rows.map(r=>{
+    const share=tot?Math.round(r.v/tot*100):0;
+    return`<div class="sub-row" data-tip="${esc(`${r.sub} (${r.cat})\n${fmt(r.v)} · ${share}% dos gastos do período`)}"><div class="sub-label"><span>${esc(r.sub)}</span><small>${esc(r.cat)}</small></div><div class="progress-track"><div class="progress-fill" style="width:${(r.v/max*100).toFixed(1)}%;background:var(--red)"></div></div><div class="progress-pct">${fmt(r.v)}</div></div>`;
+  }).join('');
+}
+
+// ── PARCELAS A VENCER (colunas, próximos 12 meses) ──
+function renderParcelas(){
+  const el=document.getElementById('rptParcelas');
+  const title='<h4>Parcelas a vencer</h4><div class="rpt-sub">Compras parceladas a pagar a partir deste mês</div>';
+  const nowK=monthKeyOffset(0);
+  const fut=db.transactions.filter(t=>t.type==='gasto'&&parseInt(t.installment_total)>1&&t.date&&t.date.slice(0,7)>=nowK);
+  if(!fut.length){el.innerHTML=title+'<div class="empty-state">Nenhuma parcela a vencer</div>';return;}
+  const keys=[];for(let i=0;i<12;i++)keys.push(monthKeyOffset(i));
+  const by={};keys.forEach(k=>by[k]={v:0,n:0});
+  fut.forEach(t=>{const b=by[t.date.slice(0,7)];if(b){b.v+=parseFloat(t.value||0);b.n++;}});
+  const total=fut.reduce((s,t)=>s+parseFloat(t.value||0),0);
+  const groups=new Set(fut.map(t=>t.installment_group||t.id)).size;
+  const lastK=fut.map(t=>t.date.slice(0,7)).sort().pop();
+  const W=chartWidth(el,420),H=190,pad={t:20,r:8,b:28,l:52},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  const maxV=Math.max(...keys.map(k=>by[k].v),1),ticks=niceTicks(0,maxV,3),hi=ticks[ticks.length-1];
+  const compact=hi>=10000,band=cW/keys.length,bw=Math.max(4,Math.min(24,band-6)),baseY=pad.t+cH;
+  const maxK=keys.reduce((a,k)=>by[k].v>by[a].v?k:a,keys[0]);
+  let grid='',bars='',labels='';
+  ticks.forEach(t=>{const y=(pad.t+cH*(1-t/hi)).toFixed(1);grid+=`<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="${CHART.grid}" stroke-width="1"/><text x="${pad.l-8}" y="${(+y+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="${CHART.axis}">${fmtTick(t,compact)}</text>`;});
+  const step=Math.ceil(46/band); // pula rótulos de mês se não couberem
+  keys.forEach((k,i)=>{
+    const {v,n}=by[k],h=v/hi*cH,x=pad.l+i*band+(band-bw)/2,cx=(pad.l+i*band+band/2).toFixed(1);
+    if(i%step===0)labels+=`<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="10" fill="${CHART.axis}">${keyLabel(k)}</text>`;
+    let mark='';
+    if(h>0){
+      const y=baseY-h,r=Math.min(4,h,bw/2);
+      mark=`<path d="M${x.toFixed(1)},${baseY} L${x.toFixed(1)},${(y+r).toFixed(1)} Q${x.toFixed(1)},${y.toFixed(1)} ${(x+r).toFixed(1)},${y.toFixed(1)} L${(x+bw-r).toFixed(1)},${y.toFixed(1)} Q${(x+bw).toFixed(1)},${y.toFixed(1)} ${(x+bw).toFixed(1)},${(y+r).toFixed(1)} L${(x+bw).toFixed(1)},${baseY} Z" fill="${CHART.amber}"/>`;
+      if(k===maxK)mark+=`<text x="${cx}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">R$ ${fmtTick(Math.round(v),v>=10000)}</text>`;
+    }
+    const tip=`${keyLabel(k)}\n${v?`${fmt(v)} em ${n} parcela${n>1?'s':''}`:'Nenhuma parcela'}`;
+    bars+=`<g class="hov" data-tip="${esc(tip)}"><rect x="${(pad.l+i*band).toFixed(1)}" y="${pad.t}" width="${band.toFixed(1)}" height="${cH}" fill="transparent"/>${mark}</g>`;
+  });
+  el.innerHTML=title+
+    `<div class="rpt-summary"><span>A pagar: <strong>${fmt(total)}</strong></span><span><strong>${groups}</strong> parcelamento${groups>1?'s':''}</span><span>Última parcela: <strong>${keyLabel(lastK)}</strong></span></div>`+
+    `<svg class="rpt-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Parcelas a vencer nos próximos 12 meses">${grid}${bars}${labels}</svg>`+
+    valuesTable(['Mês','Valor','Parcelas'],keys.filter(k=>by[k].v).map(k=>[keyLabel(k),fmt(by[k].v),String(by[k].n)]));
+}
+
+// Dica flutuante dos gráficos: qualquer elemento com data-tip.
+function initChartTips(){
+  const tip=document.createElement('div');tip.id='chartTip';document.body.appendChild(tip);
+  const move=e=>{const r=tip.getBoundingClientRect();let x=e.clientX+14,y=e.clientY+14;if(x+r.width>innerWidth-8)x=e.clientX-r.width-14;if(y+r.height>innerHeight-8)y=e.clientY-r.height-14;tip.style.left=x+'px';tip.style.top=y+'px';};
+  document.addEventListener('mouseover',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el){tip.textContent=el.getAttribute('data-tip');tip.classList.add('show');move(e);}else tip.classList.remove('show');});
+  document.addEventListener('mousemove',e=>{if(tip.classList.contains('show'))move(e);});
+  document.addEventListener('mouseleave',()=>tip.classList.remove('show'));
+}
 
 function renderSettings(){
   const allCats=[...db.catExp,...db.catRec];
@@ -728,5 +889,8 @@ async function changePassword(){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.modal-bg').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
+  initChartTips();
+  // Redesenha os relatórios ao redimensionar a janela (os gráficos usam a largura real do card).
+  let rptResize;window.addEventListener('resize',()=>{clearTimeout(rptResize);rptResize=setTimeout(()=>{if(document.getElementById('tab-reports').classList.contains('active'))renderReports();},150);});
   tryAutoLogin();
 });

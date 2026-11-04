@@ -199,11 +199,63 @@ tr:hover td{background:rgba(108,99,255,.06)}
 .filter-row select{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.4rem .7rem;font-size:.82rem;outline:none}
 .filter-row select option{background:var(--bg2);color:#fff}
 .empty-state{text-align:center;padding:2.5rem;color:var(--muted);font-size:.87rem}
-.obj-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:.85rem}
-.obj-name{font-weight:700;color:#fff}.obj-pct{font-size:.82rem;color:var(--accent2);font-weight:600}
-.obj-bar-track{background:var(--bg3);border-radius:8px;height:10px;margin:.75rem 0 .5rem}
-.obj-bar-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:.8s}
-.obj-meta{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted);flex-wrap:wrap;gap:.25rem}
+/* ── Objetivos ── */
+.metric-sub{font-size:.7rem;color:var(--muted);margin-top:.25rem}
+.metric-of{font-size:.8rem;font-weight:500;color:var(--muted)}
+.goal-notice{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);color:#fbbf24;border-radius:10px;padding:.7rem .9rem;font-size:.8rem;margin-bottom:1rem}
+.goal-new{display:none;background:var(--card);border:1px solid var(--accent);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
+.goal-new.open{display:block}
+.goal-new .mfg input,.goal-panel .mfg input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:#fff;padding:.5rem .7rem;font-size:.86rem;outline:none}
+.goal-new .mfg input:focus,.goal-panel .mfg input:focus{border-color:var(--accent)}
+.goal-new .mfg input.invalid,.goal-panel .mfg input.invalid{border-color:var(--red)}
+.goal-new .mfg,.goal-panel .mfg{margin-bottom:.75rem}
+.goal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:1rem;align-items:start}
+.goal-section-title{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:1.75rem 0 .85rem}
+.goal-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.15rem 1.25rem;min-width:0}
+.goal-card.is-done{border-color:rgba(34,197,94,.35)}
+.goal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem}
+.goal-name{font-weight:700;color:#fff;font-size:.98rem;overflow-wrap:anywhere}
+.goal-status{font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.goal-status.ok,.goal-status.done{background:rgba(34,197,94,.14);color:#4ade80}
+.goal-status.warn{background:rgba(245,158,11,.14);color:#fbbf24}
+.goal-status.late{background:rgba(239,68,68,.14);color:#f87171}
+.goal-status.idle{background:var(--bg3);color:var(--muted)}
+.goal-amounts{display:flex;align-items:baseline;gap:.4rem;margin-top:.8rem;flex-wrap:wrap}
+.goal-current{font-size:1.3rem;font-weight:700;color:#fff}
+.goal-target{font-size:.82rem;color:var(--muted)}
+.goal-pct{margin-left:auto;font-size:.82rem;font-weight:600;color:#fff}
+.goal-track{background:var(--bg3);border-radius:6px;height:8px;margin:.5rem 0 .8rem;overflow:hidden}
+.goal-fill{height:100%;border-radius:6px;background:var(--accent);transition:width .6s}
+.goal-card.is-done .goal-fill{background:var(--green)}
+.goal-info{font-size:.78rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
+.goal-info strong{color:#fff;font-weight:600}
+.goal-btns{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-top:1rem}
+.goal-btns .btn:disabled{opacity:.4;cursor:not-allowed}
+.goal-btns .btn.active{box-shadow:0 0 0 2px var(--accent) inset}
+.goal-btns-right{margin-left:auto;display:flex;gap:.25rem}
+.goal-panel{border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem}
+.goal-panel-title{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.7rem;font-weight:500}
+.goal-panel .form-row,.goal-new .form-row{grid-template-columns:1fr 1fr}
+.goal-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem}
+.chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:#fff;padding:.28rem .7rem;font-size:.74rem;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.goal-hint{font-size:.78rem;color:var(--muted);margin-bottom:.6rem}
+.goal-hint strong{color:#fff}
+.goal-err{font-size:.78rem;color:var(--red);min-height:1rem;margin-bottom:.35rem}
+.goal-actions{display:flex;justify-content:flex-end;gap:.5rem}
+.btn-danger-solid{background:var(--red);color:#fff}.btn-danger-solid:hover{background:#dc2626}
+.goal-empty{font-size:.8rem;color:var(--muted);padding:.5rem 0}
+.goal-chart{margin-bottom:.25rem}
+.goal-hist{max-height:240px;overflow-y:auto}
+.hist-row{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:.75rem;padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.8rem}
+.hist-row:last-child{border-bottom:none}
+.hist-row.confirm{grid-template-columns:1fr auto;color:#fff}
+.hist-date{color:var(--muted);font-variant-numeric:tabular-nums}
+.hist-amt{font-weight:600;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hist-note{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:.2rem .4rem;border-radius:6px}
+.hist-del:hover{color:var(--red);background:rgba(239,68,68,.1)}
+@media(max-width:620px){.goal-panel .form-row,.goal-new .form-row{grid-template-columns:1fr 1fr}.goal-btns-right{margin-left:0}}
 .settings-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem}
 .subcat-section{margin-top:1.5rem}
 .subcat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem}
@@ -306,7 +358,24 @@ tr:hover td{background:rgba(108,99,255,.06)}
       <div id="invList"></div>
     </div>
     <div id="tab-goals" class="tab">
-      <div class="section-header"><span class="section-title">Objetivos Financeiros</span><button class="btn btn-primary" onclick="openModal('addGoal')">+ Objetivo</button></div>
+      <div class="section-header"><span class="section-title">Objetivos Financeiros</span><button class="btn btn-primary" onclick="toggleNewGoal()">+ Novo objetivo</button></div>
+      <div class="cards-row" id="goalSummary"></div>
+      <div id="goalNotice"></div>
+      <div class="goal-new" id="goalNew">
+        <div class="goal-panel-title">Novo objetivo</div>
+        <div class="mfg"><label>Nome</label><input type="text" id="gnName" maxlength="150" placeholder="Ex: Reserva de emergência, Viagem, Carro..." onkeydown="if(event.key==='Enter')createGoal();if(event.key==='Escape')toggleNewGoal(false)"></div>
+        <div class="form-row">
+          <div class="mfg"><label>Meta (R$)</label><input type="number" id="gnTarget" step="0.01" min="0.01" inputmode="decimal" placeholder="10.000,00" oninput="updateNewGoalHint()" onkeydown="if(event.key==='Enter')createGoal()"></div>
+          <div class="mfg"><label>Já tenho guardado (R$) <span class="info-tag">opcional</span></label><input type="number" id="gnCurrent" step="0.01" min="0" inputmode="decimal" placeholder="0,00" oninput="updateNewGoalHint()" onkeydown="if(event.key==='Enter')createGoal()"></div>
+        </div>
+        <div class="mfg"><label>Prazo <span class="info-tag">opcional</span></label>
+          <div class="goal-chips"><button type="button" class="chip" onclick="setGoalDeadline(6)">6 meses</button><button type="button" class="chip" onclick="setGoalDeadline(12)">1 ano</button><button type="button" class="chip" onclick="setGoalDeadline(24)">2 anos</button><button type="button" class="chip" onclick="setGoalDeadline(60)">5 anos</button></div>
+          <input type="date" id="gnDeadline" oninput="updateNewGoalHint()" onchange="updateNewGoalHint()">
+        </div>
+        <div class="goal-hint" id="gnHint"></div>
+        <div class="goal-err" id="gnErr"></div>
+        <div class="goal-actions"><button class="btn btn-ghost btn-sm" onclick="toggleNewGoal(false)">Cancelar</button><button class="btn btn-primary btn-sm" id="gnBtn" onclick="createGoal()">Criar objetivo</button></div>
+      </div>
       <div id="goalsList"></div>
     </div>
     <div id="tab-reports" class="tab">
@@ -418,18 +487,6 @@ tr:hover td{background:rgba(108,99,255,.06)}
 </div>
 
 <!-- MODAL OBJETIVO -->
-<div class="modal-bg" id="modal-addGoal">
-  <div class="modal"><h3>Novo Objetivo</h3>
-    <div class="mfg"><label>Nome <span style="color:var(--red)">*</span></label><input type="text" id="goalName" placeholder="Ex: Viagem..."><div class="field-err" id="goalNameErr">Informe o nome</div></div>
-    <div class="form-row">
-      <div class="mfg"><label>Valor meta (R$) <span style="color:var(--red)">*</span></label><input type="number" id="goalTarget" placeholder="10000" step="0.01"><div class="field-err" id="goalTargetErr">Informe o valor</div></div>
-      <div class="mfg"><label>Valor atual (R$) <span class="info-tag">opcional</span></label><input type="number" id="goalCurrent" placeholder="0" step="0.01"></div>
-    </div>
-    <div class="mfg"><label>Data limite <span class="info-tag">opcional</span></label><input type="date" id="goalDeadline"></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addGoal')">Cancelar</button><button class="btn btn-primary" onclick="saveGoal()">Salvar</button></div>
-  </div>
-</div>
-
 <div class="modal-bg" id="modal-addCatExp"><div class="modal"><h3>Nova Categoria de Gasto</h3><div class="mfg"><label>Nome</label><input type="text" id="newCatExpName" placeholder="Ex: Saúde..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addCatExp')">Cancelar</button><button class="btn btn-primary" onclick="saveCat('exp')">Salvar</button></div></div></div>
 <div class="modal-bg" id="modal-addCatRec"><div class="modal"><h3>Nova Categoria de Receita</h3><div class="mfg"><label>Nome</label><input type="text" id="newCatRecName" placeholder="Ex: Freelance..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addCatRec')">Cancelar</button><button class="btn btn-primary" onclick="saveCat('rec')">Salvar</button></div></div></div>
 <div class="modal-bg" id="modal-addSubcat"><div class="modal"><h3>Nova Subcategoria</h3><div class="mfg"><label>Categoria pai</label><select id="newSubcatCat"></select></div><div class="mfg"><label>Nome</label><input type="text" id="newSubcatName" placeholder="Ex: Mercado..."></div><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('addSubcat')">Cancelar</button><button class="btn btn-primary" onclick="saveSubcat()">Salvar</button></div></div></div>

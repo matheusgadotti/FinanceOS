@@ -1,7 +1,7 @@
 const API='https://financeos-api-jaiw.onrender.com';
 let authToken=localStorage.getItem('financeOS_token')||'';
 let currentUser=null;
-let db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[]};
+let db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[],contribs:[],contribsOk:true};
 let pendingDelId=null,pendingDelGroup=null;
 let currentYieldMode='manual';
 
@@ -114,7 +114,7 @@ async function enterApp(){
 function logout(){
   authToken='';currentUser=null;
   localStorage.removeItem('financeOS_token');localStorage.removeItem('financeOS_user');
-  db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[]};
+  db={transactions:[],investments:[],goals:[],catExp:[],catRec:[],subcategories:[],contribs:[],contribsOk:true};goalUI.panel={};goalUI.newOpen=false;
   document.getElementById('app').style.display='none';
   document.getElementById('authScreen').classList.add('visible');
   document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';
@@ -128,10 +128,13 @@ async function tryAutoLogin(){
 }
 
 async function loadAll(){
-  const[txs,invs,goals,cats,subcats]=await Promise.all([
+  const[txs,invs,goals,cats,subcats,contribs]=await Promise.all([
     apiFetch('GET','/transactions'),apiFetch('GET','/investments'),
     apiFetch('GET','/goals'),apiFetch('GET','/categories'),apiFetch('GET','/subcategories'),
+    apiFetch('GET','/goal-contributions').catch(()=>null), // opcional: a tabela de aportes pode ainda não existir
   ]);
+  db.contribs=contribs||[];db.contribsOk=Array.isArray(contribs);
+  if(!db.contribsOk)setSyncing(false);
   db.transactions=(txs||[]).map(t=>({...t,desc:t.description}));
   db.investments=invs||[];db.goals=goals||[];
   db.catExp=(cats||[]).filter(c=>c.type==='exp');
@@ -487,49 +490,277 @@ function renderInvestments(){
     </div>`;
   }).join('');
 }
+// ══ OBJETIVOS ══════════════════════════════════════════
+// Tudo acontece dentro da página (sem popups): formulário de novo objetivo no topo
+// e, em cada card, painéis para guardar, retirar, ver histórico, editar e excluir.
+const goalUI={newOpen:false,panel:{},confirmContrib:null}; // panel[id] = 'deposit'|'withdraw'|'history'|'edit'|'delete'
+const DAY_MS=864e5,MONTH_DAYS=30.44;
+const r2=n=>Math.round(n*100)/100;
+function todayISO(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function parseISO(s){return new Date(String(s).slice(0,10)+'T12:00:00');}
+function monthYear(d){return`${MES_CURTO[d.getMonth()]}/${d.getFullYear()}`;}
+function gk(id){return String(id).replace(/[^\w-]/g,'_');}
+function goalById(id){return db.goals.find(x=>x.id===id);}
+function goalContribs(id){return db.contribs.filter(c=>c.goal_id===id);}
+function timeLeftTxt(days){
+  if(days<0){const m=Math.round(-days/MONTH_DAYS);return m>=1?`venceu há ${m} ${m>1?'meses':'mês'}`:`venceu há ${-days} dia${days<-1?'s':''}`;}
+  if(days===0)return'vence hoje';
+  if(days<=45)return`faltam ${days} dia${days>1?'s':''}`;
+  const m=Math.round(days/MONTH_DAYS);return`faltam ${m} meses`;
+}
+
+// Números de cada objetivo: progresso, quanto guardar por mês, ritmo real e previsão.
+function goalStats(g){
+  const target=parseFloat(g.target)||0,current=parseFloat(g.current)||0;
+  const remaining=r2(Math.max(0,target-current)),pct=target>0?Math.min(100,current/target*100):0,done=target>0&&current>=target;
+  const now=new Date();now.setHours(12,0,0,0);
+  const list=goalContribs(g.id);
+  // Ritmo = média mensal dos aportes dos últimos 3 meses (ou desde o início do objetivo, se for mais recente).
+  // Início = criação do objetivo ou o aporte mais antigo, o que vier primeiro.
+  let started=g.created_at?new Date(g.created_at).getTime():now.getTime();
+  list.forEach(c=>{started=Math.min(started,parseISO(c.date).getTime());});
+  const winStart=new Date(Math.max(now.getTime()-90*DAY_MS,Math.min(started,now.getTime())));
+  winStart.setHours(0,0,0,0);
+  const span=Math.max(1,(now-winStart)/DAY_MS/MONTH_DAYS);
+  const recent=list.filter(c=>parseISO(c.date)>=winStart).reduce((s,c)=>s+parseFloat(c.amount),0);
+  const pace=list.length?r2(recent/span):null;
+  let daysLeft=null,needed=null;
+  if(g.deadline){daysLeft=Math.round((parseISO(g.deadline)-now)/DAY_MS);if(daysLeft>0&&remaining>0)needed=r2(remaining/Math.max(1,daysLeft/MONTH_DAYS));}
+  const eta=(!done&&pace>0)?new Date(now.getTime()+remaining/pace*MONTH_DAYS*DAY_MS):null;
+  let status;
+  if(done)status={k:'done',icon:'✓',label:'Concluído'};
+  else if(g.deadline&&daysLeft<0)status={k:'late',icon:'!',label:'Prazo vencido'};
+  else if(!list.length)status={k:'idle',icon:'○',label:'Sem aportes'};
+  else if(needed!=null)status=pace>=needed*0.95?{k:'ok',icon:'▲',label:'No ritmo'}:{k:'warn',icon:'▼',label:'Abaixo do ritmo'};
+  else status={k:'ok',icon:'●',label:'Em andamento'};
+  return{target,current,remaining,pct,done,list,pace,daysLeft,needed,eta,status};
+}
+
 function renderGoals(){
-  if(!db.goals.length){document.getElementById('goalsList').innerHTML='<div class="empty-state">Nenhum objetivo cadastrado</div>';return;}
-  document.getElementById('goalsList').innerHTML=db.goals.map(g=>{
-    const pct=Math.min((parseFloat(g.current||0)/parseFloat(g.target))*100,100);
-    return`<div class="obj-card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div class="obj-name">${esc(g.name)}</div>
-        <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="obj-pct">${pct.toFixed(1)}%</span>
-          <button class="btn btn-ghost btn-sm" onclick="editGoal(${jsArg(g.id)})">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="delGoal(${jsArg(g.id)})">🗑</button>
-        </div>
+  const all=db.goals.map(g=>({g,s:goalStats(g)}));
+  // Resumo
+  const saved=all.reduce((t,x)=>t+x.s.current,0),targets=all.reduce((t,x)=>t+x.s.target,0);
+  const doneN=all.filter(x=>x.s.done).length,mk=monthKeyOffset(0);
+  const month=db.contribs.filter(c=>String(c.date).slice(0,7)===mk).reduce((t,c)=>t+parseFloat(c.amount),0);
+  document.getElementById('goalSummary').innerHTML=!all.length?'':`
+    <div class="metric"><label>Guardado nos objetivos</label><div class="val neutral">${fmt(saved)}</div></div>
+    <div class="metric"><label>Progresso geral</label><div class="val">${targets?Math.min(100,saved/targets*100).toLocaleString('pt-BR',{maximumFractionDigits:0}):0}%</div><div class="metric-sub">de ${fmt(targets)} em metas</div></div>
+    <div class="metric"><label>Aportes neste mês</label><div class="val ${month>=0?'pos':'neg'}">${signed(month)}</div></div>
+    <div class="metric"><label>Concluídos</label><div class="val">${doneN} <span class="metric-of">de ${all.length}</span></div></div>`;
+  document.getElementById('goalNotice').innerHTML=db.contribsOk?'':'<div class="goal-notice">O histórico de aportes ainda não está ativo no banco de dados. Por enquanto, o valor guardado é alterado em ✏️ Editar.</div>';
+  document.getElementById('goalNew').classList.toggle('open',goalUI.newOpen||!all.length);
+  const el=document.getElementById('goalsList');
+  if(!all.length){el.innerHTML='';return;}
+  const active=all.filter(x=>!x.s.done).sort((a,b)=>(a.g.deadline||'9999').localeCompare(b.g.deadline||'9999'));
+  const done=all.filter(x=>x.s.done);
+  el.innerHTML=(active.length?`<div class="goal-grid">${active.map(goalCard).join('')}</div>`:'<div class="empty-state">Todos os objetivos foram concluídos 🎉 Que tal criar o próximo?</div>')+
+    (done.length?`<div class="goal-section-title">Concluídos (${done.length})</div><div class="goal-grid">${done.map(goalCard).join('')}</div>`:'');
+  drawGoalCharts();
+}
+
+function goalCard({g,s}){
+  const id=jsArg(g.id),k=gk(g.id),panel=goalUI.panel[g.id];
+  const deadline=g.deadline?`<strong>${esc(fmtD(g.deadline))}</strong> · ${timeLeftTxt(s.daysLeft)}`:'Sem prazo definido';
+  const lines=[];
+  if(s.done)lines.push(s.current>s.target?`Meta batida, com ${fmt(s.current-s.target)} a mais 🎉`:'Meta batida 🎉');
+  else{
+    if(s.needed!=null)lines.push(`Guarde <strong>${fmt(s.needed)}/mês</strong> para chegar no prazo`);
+    else if(g.deadline&&s.daysLeft<=0)lines.push('Defina um novo prazo em ✏️ Editar');
+    if(s.pace!=null)lines.push(s.pace>0?`No seu ritmo (${fmt(s.pace)}/mês), chega em <strong>${monthYear(s.eta)}</strong>`:'Sem aportes nos últimos 3 meses');
+  }
+  const canContrib=db.contribsOk;
+  return`<div class="goal-card${s.done?' is-done':''}">
+    <div class="goal-head"><div class="goal-name">${esc(g.name)}</div><span class="goal-status ${s.status.k}">${s.status.icon} ${s.status.label}</span></div>
+    <div class="goal-amounts"><span class="goal-current">${fmt(s.current)}</span><span class="goal-target">de ${fmt(s.target)}</span><span class="goal-pct">${s.pct.toLocaleString('pt-BR',{maximumFractionDigits:0})}%</span></div>
+    <div class="goal-track" role="progressbar" aria-valuenow="${Math.round(s.pct)}" aria-valuemin="0" aria-valuemax="100"><div class="goal-fill" style="width:${s.pct.toFixed(1)}%"></div></div>
+    <div class="goal-info">
+      <div>${s.done?'':`Faltam <strong>${fmt(s.remaining)}</strong> · `}${deadline}</div>
+      ${lines.map(l=>`<div>${l}</div>`).join('')}
+    </div>
+    <div class="goal-btns">
+      ${canContrib?`<button class="btn btn-primary btn-sm${panel==='deposit'?' active':''}" onclick="goalPanel(${id},'deposit')">+ Guardar</button>
+      <button class="btn btn-ghost btn-sm${panel==='withdraw'?' active':''}" onclick="goalPanel(${id},'withdraw')"${s.current>0?'':' disabled'}>− Retirar</button>
+      <button class="btn btn-ghost btn-sm${panel==='history'?' active':''}" onclick="goalPanel(${id},'history')">Histórico (${s.list.length})</button>`:''}
+      <span class="goal-btns-right"><button class="btn btn-ghost btn-sm${panel==='edit'?' active':''}" onclick="goalPanel(${id},'edit')" title="Editar" aria-label="Editar objetivo">✏️</button><button class="btn btn-danger btn-sm${panel==='delete'?' active':''}" onclick="goalPanel(${id},'delete')" title="Excluir" aria-label="Excluir objetivo">🗑</button></span>
+    </div>
+    ${panel?`<div class="goal-panel">${goalPanelHTML(g,s,panel,id,k)}</div>`:''}
+  </div>`;
+}
+
+function goalPanelHTML(g,s,panel,id,k){
+  if(panel==='deposit'||panel==='withdraw'){
+    const dep=panel==='deposit',sign=dep?1:-1;
+    const chips=dep
+      ?[100,500,1000].map(v=>[`+ ${fmt(v)}`,v]).concat(s.needed?[[`Valor do mês (${fmt(s.needed)})`,s.needed]]:[]).concat(s.remaining>0?[[`O que falta (${fmt(s.remaining)})`,s.remaining]]:[])
+      :[[`Tudo (${fmt(s.current)})`,s.current]];
+    return`<div class="goal-panel-title">${dep?'Guardar dinheiro neste objetivo':'Retirar dinheiro deste objetivo'}</div>
+      <div class="goal-chips">${chips.map(([l,v])=>`<button type="button" class="chip" onclick="setGoalAmount(${jsArg(k)},${v})">${l}</button>`).join('')}</div>
+      <div class="form-row">
+        <div class="mfg"><label>Valor (R$)</label><input type="number" id="gpAmount-${k}" step="0.01" min="0.01" inputmode="decimal" placeholder="0,00" onkeydown="goalKey(event,${id},()=>goalContribute(${id},${sign}))"></div>
+        <div class="mfg"><label>Data</label><input type="date" id="gpDate-${k}" value="${todayISO()}" onkeydown="goalKey(event,${id},()=>goalContribute(${id},${sign}))"></div>
       </div>
-      <div class="obj-bar-track"><div class="obj-bar-fill" style="width:${pct}%"></div></div>
-      <div class="obj-meta">
-        <span>${fmt(g.current||0)} de ${fmt(g.target)}</span>
-        <span>Faltam ${fmt(Math.max(0,parseFloat(g.target)-parseFloat(g.current||0)))}</span>
-        ${g.deadline?`<span>Prazo: ${esc(fmtD(g.deadline))}</span>`:''}
+      <div class="mfg"><label>Observação <span class="info-tag">opcional</span></label><input type="text" id="gpNote-${k}" maxlength="200" placeholder="${dep?'Ex: 13º salário':'Ex: emergência no carro'}" onkeydown="goalKey(event,${id},()=>goalContribute(${id},${sign}))"></div>
+      <div class="goal-err" id="gpErr-${k}"></div>
+      <div class="goal-actions"><button class="btn btn-ghost btn-sm" onclick="goalPanel(${id},null)">Cancelar</button><button class="btn ${dep?'btn-primary':'btn-ghost'} btn-sm" id="gpBtn-${k}" onclick="goalContribute(${id},${sign})">${dep?'Guardar':'Retirar'}</button></div>`;
+  }
+  if(panel==='history'){
+    const list=s.list.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.created_at).localeCompare(String(a.created_at)));
+    if(!list.length)return'<div class="goal-panel-title">Histórico</div><div class="goal-empty">Nenhum aporte ainda. Use “+ Guardar” para registrar o primeiro.</div>';
+    return`<div class="goal-panel-title">Evolução</div><div class="goal-chart" data-gid="${esc(g.id)}"></div>
+      <div class="goal-panel-title" style="margin-top:.75rem">Aportes</div>
+      <div class="goal-hist">${list.map(c=>{
+        const a=parseFloat(c.amount),cid=jsArg(c.id);
+        if(goalUI.confirmContrib===c.id)return`<div class="hist-row confirm"><span>Excluir este aporte de ${signed(a)}?</span><span><button class="btn btn-ghost btn-sm" onclick="confirmContrib(null)">Não</button> <button class="btn btn-danger btn-sm" onclick="delContribution(${cid},${id})">Excluir</button></span></div>`;
+        return`<div class="hist-row"><span class="hist-date">${esc(fmtD(String(c.date).slice(0,10)))}</span><span class="hist-amt ${a>=0?'in':'out'}">${a>=0?'▲':'▼'} ${signed(a)}</span><span class="hist-note">${esc(c.note||'')}</span><button class="hist-del" onclick="confirmContrib(${cid})" title="Excluir aporte" aria-label="Excluir aporte">✕</button></div>`;
+      }).join('')}</div>`;
+  }
+  if(panel==='edit'){
+    return`<div class="goal-panel-title">Editar objetivo</div>
+      <div class="mfg"><label>Nome</label><input type="text" id="geName-${k}" maxlength="150" value="${esc(g.name)}" onkeydown="goalKey(event,${id},()=>saveGoalEdit(${id}))"></div>
+      <div class="form-row">
+        <div class="mfg"><label>Meta (R$)</label><input type="number" id="geTarget-${k}" step="0.01" min="0.01" inputmode="decimal" value="${esc(g.target)}" onkeydown="goalKey(event,${id},()=>saveGoalEdit(${id}))"></div>
+        <div class="mfg"><label>Prazo <span class="info-tag">opcional</span></label><input type="date" id="geDeadline-${k}" value="${esc(g.deadline||'')}" onkeydown="goalKey(event,${id},()=>saveGoalEdit(${id}))"></div>
       </div>
-    </div>`;
+      ${db.contribsOk?'<div class="goal-hint">O valor guardado muda pelos botões “+ Guardar” e “− Retirar”, para manter o histórico certo.</div>':`<div class="mfg"><label>Valor guardado (R$)</label><input type="number" id="geCurrent-${k}" step="0.01" min="0" inputmode="decimal" value="${esc(g.current||0)}"></div>`}
+      <div class="goal-err" id="geErr-${k}"></div>
+      <div class="goal-actions"><button class="btn btn-ghost btn-sm" onclick="goalPanel(${id},null)">Cancelar</button><button class="btn btn-primary btn-sm" onclick="saveGoalEdit(${id})">Salvar</button></div>`;
+  }
+  if(panel==='delete'){
+    return`<div class="goal-panel-title">Excluir “${esc(g.name)}”?</div>
+      <div class="goal-hint">O objetivo e todo o histórico de aportes serão apagados. Essa ação não pode ser desfeita.</div>
+      <div class="goal-actions"><button class="btn btn-ghost btn-sm" onclick="goalPanel(${id},null)">Cancelar</button><button class="btn btn-sm btn-danger-solid" onclick="deleteGoal(${id})">Excluir objetivo</button></div>`;
+  }
+  return'';
+}
+
+// Gráfico de evolução do valor guardado (degraus: o valor muda no dia de cada aporte).
+function drawGoalCharts(){
+  document.querySelectorAll('.goal-chart[data-gid]').forEach(el=>{
+    const g=db.goals.find(x=>String(x.id)===el.dataset.gid);if(g)el.innerHTML=goalChartSVG(g,Math.max(240,el.clientWidth||320));
+  });
+}
+function goalChartSVG(g,W){
+  const list=goalContribs(g.id).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.created_at).localeCompare(String(b.created_at)));
+  const current=parseFloat(g.current)||0,target=parseFloat(g.target)||0;
+  const initial=r2(current-list.reduce((t,c)=>t+parseFloat(c.amount),0));
+  const now=new Date();now.setHours(12,0,0,0);
+  let t0=g.created_at?parseISO(String(g.created_at).slice(0,10)):parseISO(list[0].date);
+  if(parseISO(list[0].date)<t0)t0=parseISO(list[0].date);
+  const pts=[{d:t0,v:initial}];let acc=initial;
+  list.forEach(c=>{acc=r2(acc+parseFloat(c.amount));pts.push({d:parseISO(c.date),v:acc,c});});
+  const tEnd=new Date(Math.max(now.getTime(),pts[pts.length-1].d.getTime()));
+  const H=150,pad={t:16,r:12,b:22,l:50},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  const ticks=niceTicks(0,Math.max(target,...pts.map(p=>p.v),1),3),hi=ticks[ticks.length-1],compact=hi>=10000;
+  const span=Math.max(DAY_MS,tEnd-t0);
+  const X=d=>pad.l+(d-t0)/span*cW,Y=v=>pad.t+cH*(1-v/hi);
+  let grid='';ticks.forEach(t=>{const y=Y(t).toFixed(1);grid+=`<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="${CHART.grid}" stroke-width="1"/><text x="${pad.l-6}" y="${(+y+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="${CHART.axis}">${fmtTick(t,compact)}</text>`;});
+  let path=`M${X(pts[0].d).toFixed(1)},${Y(pts[0].v).toFixed(1)}`;
+  pts.slice(1).forEach(p=>{path+=` H${X(p.d).toFixed(1)} V${Y(p.v).toFixed(1)}`;});
+  path+=` H${X(tEnd).toFixed(1)}`;
+  const area=`${path} V${Y(0).toFixed(1)} H${X(t0).toFixed(1)} Z`;
+  const ty=Y(target).toFixed(1);
+  const goalLine=target?`<line x1="${pad.l}" y1="${ty}" x2="${W-pad.r}" y2="${ty}" stroke="${CHART.axis}" stroke-width="1" opacity=".6"/><text x="${W-pad.r}" y="${(+ty-5).toFixed(1)}" text-anchor="end" font-size="10" fill="${CHART.axis}">Meta ${fmt(target)}</text>`:'';
+  const dots=pts.slice(1).map(p=>{
+    const a=parseFloat(p.c.amount),tip=`${fmtD(String(p.c.date).slice(0,10))}\n${signed(a)}${p.c.note?` · ${p.c.note}`:''}\nTotal: ${fmt(p.v)}`;
+    return`<g data-tip="${esc(tip)}"><circle cx="${X(p.d).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="12" fill="transparent"/><circle cx="${X(p.d).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="4" fill="${CHART.accent}" stroke="${CHART.surface}" stroke-width="2"/></g>`;
   }).join('');
+  const dl=d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(2)}`;
+  const xl=`<text x="${pad.l}" y="${H-6}" font-size="10" fill="${CHART.axis}">${dl(t0)}</text><text x="${W-pad.r}" y="${H-6}" text-anchor="end" font-size="10" fill="${CHART.axis}">${dl(tEnd)}</text>`;
+  return`<svg class="rpt-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução do valor guardado em ${esc(g.name)}">${grid}<path d="${area}" fill="${CHART.accent}" fill-opacity=".1"/>${goalLine}<path d="${path}" fill="none" stroke="${CHART.accent}" stroke-width="2" stroke-linejoin="round"/>${dots}${xl}</svg>`;
 }
-async function saveGoal(){
-  const name=document.getElementById('goalName').value.trim();
-  const target=parseFloat(document.getElementById('goalTarget').value)||0;
-  const current=parseFloat(document.getElementById('goalCurrent').value)||0;
-  const deadline=document.getElementById('goalDeadline').value||null;
-  let valid=true;
-  if(!name){markInvalid('goalName','goalNameErr');valid=false;}else{clearInvalid('goalName','goalNameErr');}
-  if(!target){markInvalid('goalTarget','goalTargetErr');valid=false;}else{clearInvalid('goalTarget','goalTargetErr');}
-  if(!valid)return;
-  try{const r=await apiFetch('POST','/goals',{name,target,current,deadline});if(r&&r[0])db.goals.push(r[0]);closeModal('addGoal');renderAll();toast('Objetivo salvo!');['goalName','goalTarget','goalCurrent','goalDeadline'].forEach(id=>document.getElementById(id).value='');}catch(e){toast(e.message,'var(--red)');}
+
+// ── Ações ──
+function goalPanel(id,type){
+  goalUI.panel[id]=type&&goalUI.panel[id]!==type?type:null;goalUI.confirmContrib=null;
+  renderGoals();
+  const k=gk(id),focus={deposit:'gpAmount-',withdraw:'gpAmount-',edit:'geName-'}[goalUI.panel[id]];
+  if(focus){const el=document.getElementById(focus+k);if(el){el.focus();if(el.select)el.select();}}
 }
-async function editGoal(id){
-  const g=db.goals.find(x=>x.id===id);if(!g)return;
-  const nc=prompt('Valor atual (R$):',g.current||0);if(nc===null)return;
-  const current=parseFloat(nc)||0;
-  try{await apiFetch('PATCH',`/goals/${id}`,{current});const i=db.goals.findIndex(x=>x.id===id);if(i>-1)db.goals[i]={...g,current};renderAll();toast('Objetivo atualizado!');}catch(e){toast(e.message,'var(--red)');}
+function goalKey(e,id,action){if(e.key==='Enter'){e.preventDefault();action();}else if(e.key==='Escape'){goalPanel(id,null);}}
+function setGoalAmount(k,v){const el=document.getElementById('gpAmount-'+k);if(el){el.value=r2(v).toFixed(2);el.classList.remove('invalid');el.focus();}}
+function confirmContrib(cid){goalUI.confirmContrib=cid;renderGoals();}
+
+async function goalContribute(id,sign){
+  const g=goalById(id);if(!g)return;
+  const k=gk(id),amtEl=document.getElementById('gpAmount-'+k),err=document.getElementById('gpErr-'+k),btn=document.getElementById('gpBtn-'+k);
+  const amount=r2(parseFloat(amtEl.value));
+  if(!(amount>0)){err.textContent='Informe um valor maior que zero';amtEl.classList.add('invalid');amtEl.focus();return;}
+  if(sign<0&&amount>(parseFloat(g.current)||0)+0.001){err.textContent=`Você tem ${fmt(g.current)} guardado neste objetivo`;amtEl.classList.add('invalid');amtEl.focus();return;}
+  const date=document.getElementById('gpDate-'+k).value||todayISO();
+  const note=document.getElementById('gpNote-'+k).value.trim()||null;
+  btn.disabled=true;err.textContent='';
+  try{
+    const r=await apiFetch('POST','/goal-contributions',{goal_id:id,amount:sign*amount,date,note});
+    if(!r)return;
+    db.contribs.unshift(r.contribution);
+    const i=db.goals.findIndex(x=>x.id===id);if(i>-1&&r.goal)db.goals[i]={...db.goals[i],...r.goal};
+    goalUI.panel[id]=null;renderGoals();
+    toast(sign>0&&goalStats(db.goals[i]).done?'Meta batida! 🎉':sign>0?`${fmt(amount)} guardado!`:`${fmt(amount)} retirado`);
+  }catch(e){err.textContent=e.message;btn.disabled=false;}
 }
-async function delGoal(id){
-  if(!confirm('Remover objetivo?'))return;
-  try{await apiFetch('DELETE',`/goals/${id}`);db.goals=db.goals.filter(g=>g.id!==id);renderAll();toast('Removido','var(--amber)');}catch(e){toast(e.message,'var(--red)');}
+async function delContribution(cid,gid){
+  try{
+    const r=await apiFetch('DELETE',`/goal-contributions/${cid}`);if(!r)return;
+    db.contribs=db.contribs.filter(c=>c.id!==cid);
+    const i=db.goals.findIndex(x=>x.id===gid);if(i>-1&&r.goal)db.goals[i]={...db.goals[i],...r.goal};
+    goalUI.confirmContrib=null;renderGoals();toast('Aporte excluído','var(--amber)');
+  }catch(e){goalUI.confirmContrib=null;renderGoals();toast(e.message,'var(--red)');}
 }
+
+function toggleNewGoal(open){
+  goalUI.newOpen=open??!goalUI.newOpen;renderGoals();
+  if(goalUI.newOpen)document.getElementById('gnName').focus();
+}
+function setGoalDeadline(months){const d=new Date();d.setMonth(d.getMonth()+months);document.getElementById('gnDeadline').value=d.toISOString().slice(0,10);updateNewGoalHint();}
+function updateNewGoalHint(){
+  const target=parseFloat(document.getElementById('gnTarget').value)||0,current=parseFloat(document.getElementById('gnCurrent').value)||0;
+  const dl=document.getElementById('gnDeadline').value,hint=document.getElementById('gnHint');
+  const rem=target-current;
+  if(!target||rem<=0||!dl){hint.innerHTML=target&&rem<=0?'Você já tem o valor da meta 🎉':'';return;}
+  const days=Math.round((parseISO(dl)-new Date())/DAY_MS);
+  hint.innerHTML=days>0?`Para chegar lá até ${esc(fmtD(dl))}, guarde <strong>${fmt(rem/Math.max(1,days/MONTH_DAYS))}/mês</strong>.`:'Escolha uma data no futuro.';
+}
+async function createGoal(){
+  const nameEl=document.getElementById('gnName'),targetEl=document.getElementById('gnTarget'),err=document.getElementById('gnErr');
+  const name=nameEl.value.trim(),target=r2(parseFloat(targetEl.value)),current=r2(parseFloat(document.getElementById('gnCurrent').value)||0);
+  const deadline=document.getElementById('gnDeadline').value||null;
+  [nameEl,targetEl].forEach(e=>e.classList.remove('invalid'));err.textContent='';
+  if(!name){nameEl.classList.add('invalid');err.textContent='Dê um nome ao objetivo';nameEl.focus();return;}
+  if(!(target>0)){targetEl.classList.add('invalid');err.textContent='Informe o valor da meta';targetEl.focus();return;}
+  if(current<0){err.textContent='O valor guardado não pode ser negativo';return;}
+  const btn=document.getElementById('gnBtn');btn.disabled=true;
+  try{
+    const r=await apiFetch('POST','/goals',{name,target,current,deadline});
+    if(r&&r[0])db.goals.unshift(r[0]);
+    ['gnName','gnTarget','gnCurrent','gnDeadline'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('gnHint').innerHTML='';
+    goalUI.newOpen=false;renderGoals();toast('Objetivo criado!');
+  }catch(e){err.textContent=e.message;}
+  btn.disabled=false;
+}
+async function saveGoalEdit(id){
+  const k=gk(id),err=document.getElementById('geErr-'+k);
+  const nameEl=document.getElementById('geName-'+k),targetEl=document.getElementById('geTarget-'+k);
+  const name=nameEl.value.trim(),target=r2(parseFloat(targetEl.value)),deadline=document.getElementById('geDeadline-'+k).value||null;
+  if(!name){nameEl.classList.add('invalid');err.textContent='Dê um nome ao objetivo';return;}
+  if(!(target>0)){targetEl.classList.add('invalid');err.textContent='Informe o valor da meta';return;}
+  const body={name,target,deadline};
+  const curEl=document.getElementById('geCurrent-'+k);
+  if(curEl){const c=r2(parseFloat(curEl.value)||0);if(c<0){err.textContent='O valor guardado não pode ser negativo';return;}body.current=c;}
+  try{
+    await apiFetch('PATCH',`/goals/${id}`,body);
+    const i=db.goals.findIndex(x=>x.id===id);if(i>-1)db.goals[i]={...db.goals[i],...body};
+    goalUI.panel[id]=null;renderGoals();toast('Objetivo atualizado!');
+  }catch(e){err.textContent=e.message;}
+}
+async function deleteGoal(id){
+  try{
+    await apiFetch('DELETE',`/goals/${id}`);
+    db.goals=db.goals.filter(g=>g.id!==id);db.contribs=db.contribs.filter(c=>c.goal_id!==id);delete goalUI.panel[id];
+    renderGoals();toast('Objetivo excluído','var(--amber)');
+  }catch(e){toast(e.message,'var(--red)');}
+}
+
 function renderReports(){
   const allTx=db.transactions,now=new Date();
   const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];

@@ -90,7 +90,11 @@ const T = {
   int: (min, max) => v => (v === null || (Number.isInteger(v) && v >= min && v <= max)) ? v : INVALID,
   date: () => v => (v === null || v === '') ? null : (isStr(v) && DATE_RE.test(v)) ? v : INVALID,
   oneOf: (...opts) => v => opts.includes(v) ? v : INVALID,
+  // IDs podem ser uuid (texto) ou número, dependendo de como a tabela foi criada.
+  id: () => v => ((isStr(v) && v.length > 0 && v.length <= 64) || (Number.isInteger(v) && v > 0)) ? v : INVALID,
 };
+const round2 = n => Math.round(n * 100) / 100;
+const today = () => new Date().toISOString().slice(0, 10);
 
 // Campos que cada tabela aceita. Qualquer outro campo enviado (como user_id ou id)
 // é descartado, para que ninguém consiga mover dados para a conta de outra pessoa.
@@ -128,8 +132,14 @@ const SCHEMAS = {
     type: T.oneOf('exp', 'rec'),
   },
   subcategories: {
-    category_id: T.str(64),
+    category_id: T.id(),
     name: T.str(100),
+  },
+  goal_contributions: {
+    goal_id: T.id(),
+    amount: T.num(),
+    date: T.date(),
+    note: T.str(200),
   },
 };
 
@@ -376,11 +386,83 @@ app.patch('/goals/:id', authJWT, wrap(async (req, res) => {
 }));
 
 app.delete('/goals/:id', authJWT, wrap(async (req, res) => {
+  // Apaga o histórico de aportes junto (a tabela também tem "on delete cascade").
+  await supabase.from('goal_contributions').delete()
+    .eq('goal_id', req.params.id).eq('user_id', req.userId);
   const { error } = await supabase
     .from('goals').delete()
     .eq('id', req.params.id).eq('user_id', req.userId);
   if (error) return dbFail(res, error, 'Não foi possível excluir o objetivo');
   res.json({ success: true });
+}));
+
+// ── APORTES DOS OBJETIVOS ────────────────────────────
+// Cada aporte (positivo = guardou, negativo = retirou) atualiza o "current" do objetivo.
+app.get('/goal-contributions', authJWT, wrap(async (req, res) => {
+  const { data, error } = await supabase
+    .from('goal_contributions').select('*')
+    .eq('user_id', req.userId)
+    .order('date', { ascending: false }).order('created_at', { ascending: false });
+  if (error) return dbFail(res, error, 'Não foi possível carregar o histórico de aportes');
+  res.json(data);
+}));
+
+app.post('/goal-contributions', authJWT, wrap(async (req, res) => {
+  const { data: fields, error: invalid } = sanitize(req.body, SCHEMAS.goal_contributions);
+  if (invalid) return res.status(400).json({ error: invalid });
+  if (fields.goal_id == null || !fields.amount)
+    return res.status(400).json({ error: 'Informe o objetivo e um valor diferente de zero' });
+  fields.amount = round2(fields.amount);
+
+  const { data: goal } = await supabase
+    .from('goals').select('id, current')
+    .eq('id', fields.goal_id).eq('user_id', req.userId).maybeSingle();
+  if (!goal) return res.status(404).json({ error: 'Objetivo não encontrado' });
+
+  const newCurrent = round2(parseFloat(goal.current || 0) + fields.amount);
+  if (newCurrent < 0)
+    return res.status(400).json({ error: 'O valor retirado é maior que o valor guardado' });
+
+  const { data: rows, error } = await supabase
+    .from('goal_contributions')
+    .insert({ ...fields, date: fields.date || today(), user_id: req.userId })
+    .select();
+  if (error) return dbFail(res, error, 'Não foi possível registrar o aporte');
+
+  const { data: updated, error: upErr } = await supabase
+    .from('goals').update({ current: newCurrent })
+    .eq('id', goal.id).eq('user_id', req.userId).select();
+  if (upErr) {
+    // Desfaz o aporte para não deixar o histórico diferente do saldo.
+    await supabase.from('goal_contributions').delete().eq('id', rows[0].id).eq('user_id', req.userId);
+    return dbFail(res, upErr, 'Não foi possível atualizar o objetivo');
+  }
+  res.json({ contribution: rows[0], goal: updated[0] });
+}));
+
+app.delete('/goal-contributions/:id', authJWT, wrap(async (req, res) => {
+  const { data: c } = await supabase
+    .from('goal_contributions').select('id, goal_id, amount')
+    .eq('id', req.params.id).eq('user_id', req.userId).maybeSingle();
+  if (!c) return res.status(404).json({ error: 'Aporte não encontrado' });
+
+  const { data: goal } = await supabase
+    .from('goals').select('id, current')
+    .eq('id', c.goal_id).eq('user_id', req.userId).maybeSingle();
+  if (!goal) return res.status(404).json({ error: 'Objetivo não encontrado' });
+
+  const newCurrent = round2(parseFloat(goal.current || 0) - parseFloat(c.amount));
+  if (newCurrent < 0)
+    return res.status(400).json({ error: 'Não é possível excluir: o valor guardado ficaria negativo' });
+
+  const { error } = await supabase
+    .from('goal_contributions').delete().eq('id', c.id).eq('user_id', req.userId);
+  if (error) return dbFail(res, error, 'Não foi possível excluir o aporte');
+  const { data: updated, error: upErr } = await supabase
+    .from('goals').update({ current: newCurrent })
+    .eq('id', goal.id).eq('user_id', req.userId).select();
+  if (upErr) return dbFail(res, upErr, 'O aporte foi excluído, mas o objetivo não foi atualizado. Recarregue a página.');
+  res.json({ success: true, goal: updated[0] });
 }));
 
 // ── CATEGORIAS ───────────────────────────────────────
